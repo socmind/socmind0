@@ -3,7 +3,7 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { RabbitMQModule } from 'src/common/rabbitmq.module';
+import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
 
 @Global()
 @Module({

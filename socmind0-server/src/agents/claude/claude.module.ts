@@ -4,7 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ClaudeState } from './claude.state';
 import { ClaudeService } from './claude.service';
 import { ClaudeController } from './claude.controller';
-import { RabbitMQModule } from 'src/common/rabbitmq.module';
+import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [

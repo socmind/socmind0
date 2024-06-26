@@ -1,6 +1,7 @@
 // src/common/rabbitmq.module.ts
 import { Module } from '@nestjs/common';
 import * as amqplib from 'amqplib';
+import { RabbitMQService } from './rabbitmq.service';
 
 @Module({
   providers: [
@@ -22,13 +23,14 @@ import * as amqplib from 'amqplib';
         for (const queueName of queueNames) {
           await channel.assertQueue(queueName, { durable: false });
           await channel.bindQueue(queueName, exchange, '');
-          await channel.purgeQueue(queueName); // Purge the queue on startup
+          await channel.purgeQueue(queueName);
         }
 
         return channel;
       },
     },
+    RabbitMQService,
   ],
-  exports: ['RABBITMQ_CHANNEL'],
+  exports: ['RABBITMQ_CHANNEL', RabbitMQService],
 })
 export class RabbitMQModule {}

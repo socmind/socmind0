@@ -4,7 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { GptState } from './gpt.state';
 import { GptService } from './gpt.service';
 import { GptController } from './gpt.controller';
-import { RabbitMQModule } from 'src/common/rabbitmq.module';
+import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [

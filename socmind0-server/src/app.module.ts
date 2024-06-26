@@ -1,9 +1,9 @@
 // src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { GeminiModule } from './gemini/gemini.module';
-import { GptModule } from './gpt/gpt.module';
-import { ClaudeModule } from './claude/claude.module';
+import { GeminiModule } from './agents/gemini/gemini.module';
+import { GptModule } from './agents/gpt/gpt.module';
+import { ClaudeModule } from './agents/claude/claude.module';
 import { UserModule } from './user/user.module';
 
 @Module({
