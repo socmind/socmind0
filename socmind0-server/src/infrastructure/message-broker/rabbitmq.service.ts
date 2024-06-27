@@ -1,3 +1,4 @@
+// src/infrastructure/rabbitmq/rabbitmq.service.ts
 import { Injectable } from '@nestjs/common';
 import * as amqplib from 'amqplib';
 
