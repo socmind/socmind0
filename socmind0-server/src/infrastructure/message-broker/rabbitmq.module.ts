@@ -1,4 +1,4 @@
-// src/infrastructure/rabbitmq/rabbitmq.module.ts
+// src/infrastructure/message-broker/rabbitmq.module.ts
 import { Module } from '@nestjs/common';
 import * as amqplib from 'amqplib';
 import { RabbitMQService } from './rabbitmq.service';

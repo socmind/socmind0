@@ -1,28 +1,26 @@
-// src/database/prisma.service.ts
+// src/infrastructure/database/prisma.service.ts
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaService
-  extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
-{
+export class PrismaService implements OnModuleInit, OnModuleDestroy {
+  private prisma: PrismaClient;
+
   constructor() {
-    super();
+    this.prisma = new PrismaClient();
   }
 
   async onModuleInit() {
-    await this.$connect();
+    await this.prisma.$connect();
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
+    await this.prisma.$disconnect();
   }
 
-  async createChat(name: string, memberIds: string[]) {
-    return this.chat.create({
+  async createChat(memberIds: string[]) {
+    return this.prisma.chat.create({
       data: {
-        name,
         members: {
           create: memberIds.map((memberId) => ({
             member: { connect: { id: memberId } },
@@ -34,7 +32,7 @@ export class PrismaService
   }
 
   async getChatMessages(chatId: string) {
-    return this.message.findMany({
+    return this.prisma.message.findMany({
       where: { chatId },
       include: { sender: true },
       orderBy: { createdAt: 'asc' },
@@ -42,7 +40,7 @@ export class PrismaService
   }
 
   async addMemberToChat(chatId: string, memberId: string) {
-    return this.chatMember.create({
+    return this.prisma.chatMember.create({
       data: {
         chat: { connect: { id: chatId } },
         member: { connect: { id: memberId } },
@@ -51,7 +49,7 @@ export class PrismaService
   }
 
   async createMessage(content: any, senderId: string, chatId: string) {
-    return this.message.create({
+    return this.prisma.message.create({
       data: {
         content,
         sender: { connect: { id: senderId } },

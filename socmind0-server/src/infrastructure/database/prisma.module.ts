@@ -1,4 +1,4 @@
-// src/database/prisma.module.ts
+// src/infrastructure/database/prisma.module.ts
 import { Global, Module } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 

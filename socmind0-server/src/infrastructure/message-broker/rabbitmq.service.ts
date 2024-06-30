@@ -1,4 +1,4 @@
-// src/infrastructure/rabbitmq/rabbitmq.service.ts
+// src/infrastructure/message-broker/rabbitmq.service.ts
 import { Injectable } from '@nestjs/common';
 import * as amqplib from 'amqplib';
 
@@ -16,12 +16,12 @@ export class RabbitMQService {
     this.channel = await this.connection.createChannel();
   }
 
-  async createGroupChat(chatId: string, participants: string[]) {
+  async createGroupChat(chatId: string, members: string[]) {
     const exchange = `chat_${chatId}_exchange`;
     await this.channel.assertExchange(exchange, 'fanout', { durable: true });
 
-    for (const participant of participants) {
-      const queueName = `${participant}_${chatId}`;
+    for (const member of members) {
+      const queueName = `${member}_${chatId}`;
       await this.channel.assertQueue(queueName, { durable: true });
       await this.channel.bindQueue(queueName, exchange, '');
     }

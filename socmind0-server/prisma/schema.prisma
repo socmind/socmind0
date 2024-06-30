@@ -9,15 +9,16 @@ datasource db {
 }
 
 model Member {
-  id        String       @id @default(uuid())
-  name      String
-  email     String?      @unique
-  metadata  Json?
-  type      MemberType
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  chats     ChatMember[]
-  messages  Message[]
+  id            String       @id @default(uuid())
+  name          String
+  username      String       @unique
+  email         String?      @unique
+  systemMessage String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  type          MemberType
+  chats         ChatMember[]
+  messages      Message[]
 }
 
 enum MemberType {
@@ -37,24 +38,31 @@ model Chat {
 }
 
 model ChatMember {
-  id       String   @id @default(uuid())
-  memberId String
-  chatId   String
-  joinedAt DateTime @default(now())
-  member   Member   @relation(fields: [memberId], references: [id])
-  chat     Chat     @relation(fields: [chatId], references: [id])
+  id               String   @id @default(uuid())
+  memberId         String
+  chatId           String
+  chatInstructions String?
+  joinedAt         DateTime @default(now())
+  member           Member   @relation(fields: [memberId], references: [id])
+  chat             Chat     @relation(fields: [chatId], references: [id])
 
   @@unique([memberId, chatId])
 }
 
 model Message {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   content   Json
-  senderId  String
+  senderId  String?
   chatId    String
-  createdAt DateTime @default(now())
-  sender    Member   @relation(fields: [senderId], references: [id])
-  chat      Chat     @relation(fields: [chatId], references: [id])
+  createdAt DateTime    @default(now())
+  sender    Member?     @relation(fields: [senderId], references: [id])
+  chat      Chat        @relation(fields: [chatId], references: [id])
+  type      MessageType @default(MEMBER)
 
   @@index([chatId])
+}
+
+enum MessageType {
+  MEMBER
+  SYSTEM
 }
