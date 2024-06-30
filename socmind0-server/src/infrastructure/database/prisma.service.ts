@@ -1,63 +1,141 @@
 // src/infrastructure/database/prisma.service.ts
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 @Injectable()
-export class PrismaService implements OnModuleInit, OnModuleDestroy {
-  private prisma: PrismaClient;
-
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor() {
-    this.prisma = new PrismaClient();
+    super();
   }
 
   async onModuleInit() {
-    await this.prisma.$connect();
+    await this.$connect();
   }
 
   async onModuleDestroy() {
-    await this.prisma.$disconnect();
+    await this.$disconnect();
   }
 
-  async createChat(memberIds: string[]) {
-    return this.prisma.chat.create({
-      data: {
-        members: {
-          create: memberIds.map((memberId) => ({
-            member: { connect: { id: memberId } },
-          })),
-        },
-      },
-      include: { members: true },
+  // Member methods
+  async createMember(data: Prisma.MemberCreateInput): Promise<string> {
+    const member = await this.member.create({ data });
+    return member.id;
+  }
+
+  async getMember(id: string) {
+    return this.member.findUnique({ where: { id } });
+  }
+
+  async updateMember(id: string, data: Prisma.MemberUpdateInput) {
+    return this.member.update({ where: { id }, data });
+  }
+
+  async deleteMember(id: string) {
+    return this.member.delete({ where: { id } });
+  }
+
+  // Chat methods
+  async createChat(data: Prisma.ChatCreateInput): Promise<string> {
+    const chat = await this.chat.create({ data });
+    return chat.id;
+  }
+
+  async getChat(id: string) {
+    return this.chat.findUnique({
+      where: { id },
+      include: { members: true, messages: true },
     });
   }
 
-  async getChatMessages(chatId: string) {
-    return this.prisma.message.findMany({
-      where: { chatId },
-      include: { sender: true },
-      orderBy: { createdAt: 'asc' },
-    });
+  async updateChat(id: string, data: Prisma.ChatUpdateInput) {
+    return this.chat.update({ where: { id }, data });
   }
 
-  async addMemberToChat(chatId: string, memberId: string) {
-    return this.prisma.chatMember.create({
+  async deleteChat(id: string) {
+    return this.chat.delete({ where: { id } });
+  }
+
+  // ChatMember methods
+  async addMemberToChat(
+    chatId: string,
+    memberId: string,
+    chatInstructions?: string,
+  ): Promise<string> {
+    const chatMember = await this.chatMember.create({
       data: {
         chat: { connect: { id: chatId } },
         member: { connect: { id: memberId } },
+        chatInstructions,
+      },
+    });
+    return chatMember.id;
+  }
+
+  async removeMemberFromChat(chatId: string, memberId: string) {
+    return this.chatMember.delete({
+      where: {
+        memberId_chatId: {
+          memberId,
+          chatId,
+        },
       },
     });
   }
 
-  async createMessage(content: any, senderId: string, chatId: string) {
-    return this.prisma.message.create({
-      data: {
-        content,
-        sender: { connect: { id: senderId } },
-        chat: { connect: { id: chatId } },
-      },
+  // Message methods
+  async createMessage(data: Prisma.MessageCreateInput): Promise<string> {
+    const message = await this.message.create({ data });
+    return message.id;
+  }
+
+  async getMessagesForChat(
+    chatId: string,
+    limit: number = 50,
+    cursor?: string,
+  ) {
+    return this.message.findMany({
+      where: { chatId },
+      take: limit,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' },
       include: { sender: true },
     });
   }
 
-  // Add more methods as needed...
+  // Utility methods
+  async getChatMembers(chatId: string) {
+    return this.chatMember.findMany({
+      where: { chatId },
+      include: { member: true },
+    });
+  }
+
+  async getUserChats(userId: string) {
+    return this.chat.findMany({
+      where: {
+        members: {
+          some: {
+            memberId: userId,
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            member: true,
+          },
+        },
+        messages: {
+          take: 1,
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+    });
+  }
 }

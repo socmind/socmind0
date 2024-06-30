@@ -7,6 +7,7 @@ import { ClaudeModule } from './agents/claude/claude.module';
 import { UserModule } from './user/user.module';
 import { PrismaModule } from './infrastructure/database/prisma.module';
 import { RabbitMQModule } from './infrastructure/message-broker/rabbitmq.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { RabbitMQModule } from './infrastructure/message-broker/rabbitmq.module'
     }),
     PrismaModule,
     RabbitMQModule,
+    ChatModule,
     UserModule,
     GptModule,
     GeminiModule,
