@@ -8,7 +8,8 @@ import * as amqplib from 'amqplib';
 @Controller()
 export class GptController {
   private readonly microserviceId: string;
-  private readonly exchange = 'fanout_exchange';
+  private memberId = 'gpt-4o';
+  private readonly exchange = 'service_exchange';
 
   constructor(
     private readonly gpt4Service: GptService,

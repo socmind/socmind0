@@ -33,6 +33,31 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async createServiceExchange() {
+    const exchange = 'service_exchange';
+    await this.channel.assertExchange(exchange, 'direct', { durable: true });
+  }
+
+  async createMemberServiceQueue(memberId: string) {
+    const exchange = 'service_exchange';
+    const queueName = `${memberId}_service_queue`;
+
+    await this.channel.assertQueue(queueName, { durable: true });
+    await this.channel.bindQueue(queueName, exchange, memberId);
+
+    return queueName;
+  }
+
+  async sendServiceMessage(memberId: string, message: any) {
+    const exchange = 'service_exchange';
+    const messageBuffer = Buffer.from(JSON.stringify(message));
+
+    this.channel.publish(exchange, memberId, messageBuffer, {
+      persistent: true,
+      contentType: 'application/json',
+    });
+  }
+
   async createOrAddMembersToGroupChat(chatId: string, memberIds: string[]) {
     const exchange = `${chatId}_exchange`;
     await this.channel.assertExchange(exchange, 'fanout', { durable: true });

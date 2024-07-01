@@ -1,15 +1,30 @@
 // src/chat/chat.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma.service';
 import { RabbitMQService } from '../infrastructure/message-broker/rabbitmq.service';
 import { MessageType, Prisma } from '@prisma/client';
 
 @Injectable()
-export class ChatService {
+export class ChatService implements OnModuleInit {
   constructor(
     private prismaService: PrismaService,
     private rabbitMQService: RabbitMQService,
   ) {}
+
+  async onModuleInit() {
+    // Initialize the direct communication exchange
+    await this.rabbitMQService.createServiceExchange();
+
+    // Get all members
+    const members = await this.prismaService.getAllMembers();
+
+    // Create service queues for all existing members
+    for (const member of members) {
+      await this.rabbitMQService.createMemberServiceQueue(member.id);
+    }
+
+    console.log('Initialized service queues for all existing members');
+  }
 
   async sendMessage(
     chatId: string,
@@ -124,7 +139,7 @@ export class ChatService {
   ): Promise<void> {
     // Start a transaction to ensure database consistency
     await this.prismaService.$transaction(async (prisma) => {
-      // 1. Add the member to the chat in the database
+      // Add the member to the chat in the database
       const chatMember = await prisma.chatMember.create({
         data: {
           chat: { connect: { id: chatId } },
@@ -137,12 +152,15 @@ export class ChatService {
         },
       });
 
-      // 2. Set up RabbitMQ queue for the new member
+      // Set up RabbitMQ queue for the new member
       await this.rabbitMQService.createOrAddMembersToGroupChat(chatId, [
         memberId,
       ]);
 
-      // 3. Use sendMessage to create a system message announcing the new member
+      // Create service queue for the new member if it doesn't exist
+      await this.rabbitMQService.createMemberServiceQueue(memberId);
+
+      // Use sendMessage to create a system message announcing the new member
       await this.sendMessage(
         chatId,
         { text: `${chatMember.member.name} has joined the chat.` },

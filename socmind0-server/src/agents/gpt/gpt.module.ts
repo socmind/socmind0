@@ -5,6 +5,7 @@ import { GptState } from './gpt.state';
 import { GptService } from './gpt.service';
 import { GptController } from './gpt.controller';
 import { RabbitMQModule } from 'src/infrastructure/message-broker/rabbitmq.module';
+import { PrismaModule } from 'src/infrastructure/database/prisma.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { RabbitMQModule } from 'src/infrastructure/message-broker/rabbitmq.modul
       isGlobal: true,
     }),
     RabbitMQModule,
+    PrismaModule,
   ],
   controllers: [GptController],
   providers: [GptService, GptState],

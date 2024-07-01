@@ -20,6 +20,14 @@ export class PrismaService
   }
 
   // Member methods
+  async getAllMembers(): Promise<{ id: string }[]> {
+    return this.member.findMany({
+      select: {
+        id: true,
+      },
+    });
+  }
+
   async createMember(data: Prisma.MemberCreateInput): Promise<string> {
     const member = await this.member.create({ data });
     return member.id;
