@@ -1,44 +1,53 @@
-// gpt.controller.ts
-import { Controller, Inject } from '@nestjs/common';
-import { Payload } from '@nestjs/microservices';
+// src/agents/gpt/gpt.controller.ts
+import { Controller } from '@nestjs/common';
 import { GptService } from './gpt.service';
-import { v4 as uuidv4 } from 'uuid';
-import * as amqplib from 'amqplib';
+import { RabbitMQService } from 'src/infrastructure/message-broker/rabbitmq.service';
+import { ChatService } from 'src/chat/chat.service';
+import { PrismaService } from 'src/infrastructure/database/prisma.service';
 
 @Controller()
 export class GptController {
-  private readonly microserviceId: string;
   private memberId = 'gpt-4o';
-  private readonly exchange = 'service_exchange';
+  private serviceExchange = 'service_exchange';
+  private serviceQueue = `${this.memberId}_service_queue`;
 
   constructor(
     private readonly gpt4Service: GptService,
-    @Inject('RABBITMQ_CHANNEL') private readonly channel: amqplib.Channel,
-  ) {
-    this.microserviceId = uuidv4();
-  }
+    private readonly rabbitmqService: RabbitMQService,
+    private readonly chatService: ChatService,
+    private readonly prismaService: PrismaService,
+  ) {}
 
   async onModuleInit() {
-    const queueName = 'gpt_queue';
-
-    await this.channel.consume(queueName, async (msg) => {
-      if (msg !== null) {
-        const message = JSON.parse(msg.content.toString());
-        await this.handleMessageReceived(message);
-        this.channel.ack(msg);
-      }
+    // Retrieve all chats associated with the member ID of this controller
+    const chats = await this.prismaService.getUserChats(this.memberId);
+    // Start listening to each chat using the listenFromQueue method
+    chats.forEach((chat) => {
+      this.listenFromQueue(chat.id);
     });
-
-    console.log('Waiting for messages in queue:', queueName);
   }
 
-  async handleMessageReceived(@Payload() message: any) {
-    // Ignore messages from the same microservice instance
-    if (message.microserviceId === this.microserviceId) {
+  async listenFromQueue(chatId: string) {
+    // Start consuming messages from chat
+    await this.rabbitmqService.consumeMessage(
+      this.memberId,
+      chatId,
+      this.handleMessage.bind(this),
+    );
+    console.log(
+      `${this.memberId} is now listening for messages from chat ${chatId}.`,
+    );
+  }
+
+  async handleMessage(message: any) {
+    // Ignore own messages
+    if (message.senderId === this.memberId) {
       return;
     }
 
     // console.log(`${message.content}\n`);
+
+    const chatId = message.chatId;
 
     try {
       const reply = await this.gpt4Service.reply(message);
@@ -49,11 +58,7 @@ export class GptController {
 
       // console.log(`${reply.content}\n`);
 
-      const msg = {
-        ...reply,
-        microserviceId: this.microserviceId,
-      };
-      this.channel.publish(this.exchange, '', Buffer.from(JSON.stringify(msg)));
+      this.chatService.sendMessage(chatId, reply, { senderId: this.memberId });
     } catch (error) {
       console.error('Failed to process message:', error.message);
     }

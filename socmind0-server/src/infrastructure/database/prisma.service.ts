@@ -122,25 +122,12 @@ export class PrismaService
     });
   }
 
-  async getUserChats(userId: string) {
+  async getUserChats(memberId: string) {
     return this.chat.findMany({
       where: {
         members: {
           some: {
-            memberId: userId,
-          },
-        },
-      },
-      include: {
-        members: {
-          include: {
-            member: true,
-          },
-        },
-        messages: {
-          take: 1,
-          orderBy: {
-            createdAt: 'desc',
+            memberId: memberId,
           },
         },
       },
