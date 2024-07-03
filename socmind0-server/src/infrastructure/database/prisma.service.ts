@@ -51,10 +51,25 @@ export class PrismaService
     return chat.id;
   }
 
-  async getChat(id: string) {
+  async getChatMetadata(id: string) {
     return this.chat.findUnique({
       where: { id },
-      include: { members: true, messages: true },
+      include: {
+        members: {
+          include: {
+            member: {
+              select: {
+                id: true,
+                name: true,
+                // Add any other member fields you want to include
+              },
+            },
+          },
+        },
+        _count: {
+          select: { messages: true },
+        },
+      },
     });
   }
 

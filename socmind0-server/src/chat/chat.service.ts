@@ -216,6 +216,11 @@ export class ChatService implements OnModuleInit {
     console.log('Initialized service queues for all existing members.');
   }
 
+  async getChatMetadata(chatId: string) {
+    const chatMetadata = await this.prismaService.getChatMetadata(chatId);
+    return chatMetadata;
+  }
+
   async getConversationHistory(chatId: string) {
     const conversation = await this.prismaService.getChatHistory(chatId);
     return conversation;
