@@ -49,15 +49,6 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     return queueName;
   }
 
-  async sendServiceMessage(memberId: string, message: any) {
-    const messageBuffer = Buffer.from(JSON.stringify(message));
-
-    this.channel.publish(this.serviceExchange, memberId, messageBuffer, {
-      persistent: true,
-      contentType: 'application/json',
-    });
-  }
-
   async createOrAddMembersToGroupChat(chatId: string, memberIds: string[]) {
     const exchange = `${chatId}_exchange`;
     await this.channel.assertExchange(exchange, 'fanout', { durable: true });
@@ -93,12 +84,48 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async consumeMessage(
+  async consumeMessages(
     memberId: string,
     chatId: string,
     callback: (message: any) => void,
   ) {
     const queueName = `${chatId}_${memberId}_queue`;
+
+    try {
+      await this.channel.consume(queueName, (msg) => {
+        if (msg !== null) {
+          try {
+            const content = JSON.parse(msg.content.toString());
+            callback(content);
+            this.channel.ack(msg);
+          } catch (parseError) {
+            console.error('Failed to parse message:', parseError);
+            this.channel.nack(msg);
+          }
+        }
+      });
+      console.log(
+        `${memberId} is now listening for messages from chat ${chatId}.`,
+      );
+    } catch (consumeError) {
+      console.error(`Failed to initialize queue ${queueName}: ${consumeError}`);
+    }
+  }
+
+  async sendServiceMessage(memberId: string, message: any) {
+    const messageBuffer = Buffer.from(JSON.stringify(message));
+
+    this.channel.publish(this.serviceExchange, memberId, messageBuffer, {
+      persistent: true,
+      contentType: 'application/json',
+    });
+  }
+
+  async consumeServiceMessage(
+    memberId: string,
+    callback: (message: any) => void,
+  ) {
+    const queueName = `${memberId}_service_queue`;
 
     await this.channel.consume(queueName, (msg) => {
       if (msg !== null) {

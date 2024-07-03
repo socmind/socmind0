@@ -99,7 +99,7 @@ export class PrismaService
     return message.id;
   }
 
-  async getMessagesForChat(
+  async getRecentMessagesForChat(
     chatId: string,
     limit: number = 50,
     cursor?: string,
@@ -132,5 +132,21 @@ export class PrismaService
         },
       },
     });
+  }
+
+  async getChatHistory(chatId: string) {
+    const messages = await this.message.findMany({
+      where: {
+        chatId: chatId,
+      },
+      include: {
+        sender: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    return messages;
   }
 }

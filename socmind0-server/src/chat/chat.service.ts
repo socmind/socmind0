@@ -12,18 +12,7 @@ export class ChatService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // Initialize the direct communication exchange
-    await this.rabbitMQService.createServiceExchange();
-
-    // Get all members
-    const members = await this.prismaService.getAllMembers();
-
-    // Create service queues for all existing members
-    for (const member of members) {
-      await this.rabbitMQService.createMemberServiceQueue(member.id);
-    }
-
-    console.log('Initialized service queues for all existing members');
+    this.createServiceQueues();
   }
 
   async sendMessage(
@@ -42,7 +31,7 @@ export class ChatService implements OnModuleInit {
     // Create the message data
     const messageData: Prisma.MessageCreateInput = {
       chat: { connect: { id: chatId } },
-      content: JSON.stringify(content),
+      content: content,
       type: messageType,
     };
 
@@ -54,10 +43,11 @@ export class ChatService implements OnModuleInit {
     const rabbitMQMessage = {
       content,
       messageType,
+      chatId,
       ...(senderId && { senderId }),
     };
 
-    const executeOperations = async (prisma: Prisma.TransactionClient) => {
+    const execute = async (prisma: Prisma.TransactionClient) => {
       const message = await prisma.message.create({
         data: messageData,
       });
@@ -65,18 +55,17 @@ export class ChatService implements OnModuleInit {
       try {
         await this.rabbitMQService.sendMessage(chatId, rabbitMQMessage);
       } catch (error) {
-        // Log the error and potentially implement a retry mechanism
         console.error('Failed to send message to RabbitMQ:', error);
-        throw error; // Re-throw to trigger transaction rollback
+        throw error;
       }
 
       return message.id;
     };
 
     if (prismaTransaction) {
-      return executeOperations(prismaTransaction);
+      return execute(prismaTransaction);
     } else {
-      return this.prismaService.$transaction(executeOperations);
+      return this.prismaService.$transaction(execute);
     }
   }
 
@@ -118,6 +107,13 @@ export class ChatService implements OnModuleInit {
         memberIds,
       );
 
+      for (const memberId of memberIds) {
+        await this.rabbitMQService.sendServiceMessage(memberId, {
+          notification: 'NEW_CHAT',
+          chatId: chat.id,
+        });
+      }
+
       console.log(`Chat ${chat.id} created.`);
 
       if (context !== undefined) {
@@ -130,6 +126,45 @@ export class ChatService implements OnModuleInit {
 
       return chat.id;
     });
+  }
+
+  async initAllQueuesConsumption(
+    memberId: string,
+    messageHandler: (message: any) => void,
+  ) {
+    const chats = await this.prismaService.getUserChats(memberId);
+
+    const initializationPromises = chats.map((chat) =>
+      this.initQueueConsumption(memberId, chat.id, messageHandler),
+    );
+
+    await Promise.all(initializationPromises);
+
+    console.log(`Chat queues initialized for member ${memberId}.`);
+  }
+
+  async initQueueConsumption(
+    memberId: string,
+    chatId: string,
+    messageHandler: (message: any) => void,
+  ) {
+    await this.rabbitMQService.consumeMessages(
+      memberId,
+      chatId,
+      messageHandler,
+    );
+  }
+
+  async initServiceQueueConsumption(
+    memberId: string,
+    serviceMessageHandler: (message: any) => void,
+  ) {
+    await this.rabbitMQService.consumeServiceMessage(
+      memberId,
+      serviceMessageHandler,
+    );
+
+    console.log(`Service queue initialized for member ${memberId}.`);
   }
 
   async addMemberToChat(
@@ -169,7 +204,20 @@ export class ChatService implements OnModuleInit {
     });
   }
 
-  async getChatMessages(chatId: string, limit: number = 50, cursor?: string) {
-    return this.prismaService.getMessagesForChat(chatId, limit, cursor);
+  async createServiceQueues() {
+    await this.rabbitMQService.createServiceExchange();
+
+    const members = await this.prismaService.getAllMembers();
+    const serviceQueueCreationPromises = members.map((member) =>
+      this.rabbitMQService.createMemberServiceQueue(member.id),
+    );
+    await Promise.all(serviceQueueCreationPromises);
+
+    console.log('Initialized service queues for all existing members.');
+  }
+
+  async getConversationHistory(chatId: string) {
+    const conversation = await this.prismaService.getChatHistory(chatId);
+    return conversation;
   }
 }

@@ -1,8 +1,13 @@
 // gpt.state.ts
 import { Injectable } from '@nestjs/common';
+import { ChatService } from 'src/chat/chat.service';
 
 @Injectable()
 export class GptState {
+  private readonly memberId = 'gpt-4o';
+
+  constructor(private readonly chatService: ChatService) {}
+
   private memory: any[] = [
     {
       role: 'system',
@@ -14,24 +19,18 @@ export class GptState {
     },
   ];
 
-  private transformMessage(msg: any): any {
-    if (msg.content) {
-      return { role: 'user', content: msg.content };
-    } else {
-      throw new Error('GPT-4 error: content field missing from message.');
-    }
-  }
+  async getConversation(chatId: string): Promise<any[]> {
+    const messages = await this.chatService.getConversationHistory(chatId);
+    const formattedMessages = messages.map((message) => ({
+      role:
+        message.type === 'SYSTEM'
+          ? 'system'
+          : message.sender?.id === this.memberId
+            ? 'assistant'
+            : 'user',
+      content: (message.content as any).text ?? '',
+    }));
 
-  transformAndAddMessage(rawMessage: any) {
-    const message = this.transformMessage(rawMessage);
-    this.memory.push(message);
-  }
-
-  addMessage(message: any) {
-    this.memory.push(message);
-  }
-
-  getFormattedMessages(): any[] {
-    return this.memory;
+    return formattedMessages;
   }
 }
