@@ -1,28 +1,50 @@
-// user.service.ts
-import { Injectable, Inject } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
-import * as amqplib from 'amqplib';
+// src/user/user.service.ts
+import { Injectable } from '@nestjs/common';
+import { ChatService } from 'src/chat/chat.service';
+import { UserGateway } from './user.gateway';
 
 @Injectable()
 export class UserService {
-  readonly microserviceId: string;
-  private readonly exchange = 'fanout_exchange';
+  private readonly memberId = 'flynn';
 
   constructor(
-    @Inject('RABBITMQ_CHANNEL') private readonly channel: amqplib.Channel,
-  ) {
-    this.microserviceId = uuidv4();
+    private readonly chatService: ChatService,
+    private readonly userGateway: UserGateway,
+  ) {}
+
+  async onModuleInit() {
+    await this.chatService.initAllQueuesConsumption(
+      this.memberId,
+      this.handleMessage.bind(this),
+    );
+
+    await this.chatService.initServiceQueueConsumption(
+      this.memberId,
+      this.handleServiceMessage.bind(this),
+    );
   }
 
-  async sendMessage(message: any) {
-    try {
-      const msg = {
-        ...message,
-        microserviceId: this.microserviceId,
-      };
-      this.channel.publish(this.exchange, '', Buffer.from(JSON.stringify(msg)));
-    } catch (error) {
-      console.error('Error sending message:', error);
+  async handleMessage(message: any) {
+    if (message.senderId === this.memberId) {
+      return;
+    }
+
+    const chatId = message.chatId;
+
+    // Emit the received message to the connected client
+    this.userGateway.sendMessageToUser(this.memberId, chatId, message);
+  }
+
+  async handleServiceMessage(message: any) {
+    if (message.notification == 'NEW_CHAT' && message.chatId) {
+      await this.chatService.initQueueConsumption(
+        this.memberId,
+        message.chatId,
+        this.handleMessage.bind(this),
+      );
+      console.log(
+        `Queue to chat ${message.chatId} initialized for member ${this.memberId}.`,
+      );
     }
   }
 }

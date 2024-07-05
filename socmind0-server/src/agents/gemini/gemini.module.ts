@@ -4,7 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { GeminiState } from './gemini.state';
 import { GeminiService } from './gemini.service';
 import { GeminiController } from './gemini.controller';
-import { RabbitMQModule } from 'src/infrastructure/message-broker/rabbitmq.module';
+import { RabbitMQModule } from 'src/chat/infrastructure/message-broker/rabbitmq.module';
 
 @Module({
   imports: [

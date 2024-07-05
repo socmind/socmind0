@@ -1,20 +1,11 @@
-// user.module.ts
-import { Global, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+// src/user/user.module.ts
+import { Module } from '@nestjs/common';
+import { ChatModule } from 'src/chat/chat.module';
 import { UserService } from './user.service';
-import { UserController } from './user.controller';
-import { RabbitMQModule } from 'src/infrastructure/message-broker/rabbitmq.module';
+import { UserGateway } from './user.gateway';
 
-@Global()
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    RabbitMQModule,
-  ],
-  controllers: [UserController],
-  providers: [UserService],
-  exports: [UserService],
+  imports: [ChatModule],
+  providers: [UserService, UserGateway],
 })
 export class UserModule {}

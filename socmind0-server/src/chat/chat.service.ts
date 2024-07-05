@@ -1,7 +1,7 @@
 // src/chat/chat.service.ts
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from 'src/infrastructure/database/prisma.service';
-import { RabbitMQService } from '../infrastructure/message-broker/rabbitmq.service';
+import { RabbitMQService } from 'src/chat/infrastructure/message-broker/rabbitmq.service';
+import { PrismaService } from 'src/chat/infrastructure/database/prisma.service';
 import { MessageType, Prisma } from '@prisma/client';
 
 @Injectable()
