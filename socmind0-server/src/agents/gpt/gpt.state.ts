@@ -1,4 +1,4 @@
-// gpt.state.ts
+// src/agents/gpt/gpt.state.ts
 import { Injectable } from '@nestjs/common';
 import { ChatService } from 'src/chat/chat.service';
 

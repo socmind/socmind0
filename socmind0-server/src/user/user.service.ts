@@ -42,6 +42,9 @@ export class UserService {
         message.chatId,
         this.handleMessage.bind(this),
       );
+
+      this.userGateway.notifyNewChat(this.memberId, message.chatId);
+
       console.log(
         `Queue to chat ${message.chatId} initialized for member ${this.memberId}.`,
       );
