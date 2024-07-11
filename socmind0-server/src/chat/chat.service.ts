@@ -221,6 +221,11 @@ export class ChatService implements OnModuleInit {
     return chatMetadata;
   }
 
+  async getMemberMetadata(memberId: string) {
+    const memberMetadata = await this.prismaService.getMember(memberId);
+    return memberMetadata;
+  }
+
   async getConversationHistory(chatId: string) {
     const conversation = await this.prismaService.getChatHistory(chatId);
     return conversation;

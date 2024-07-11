@@ -8,29 +8,29 @@ export class GptState {
 
   constructor(private readonly chatService: ChatService) {}
 
-  private memory: any[] = [
-    {
-      role: 'system',
-      content: `Your name is Charles.
-      You are in a multi-speaker conversation.
-      Prepend "Charles: " to all of your replies, so that conversants know who is speaking.
-      You don't need to reply to every message.
-      If you deem that nothing needs to be said, reply with just the empty string, without "Charles: " prepended.`,
-    },
-  ];
-
   async getConversation(chatId: string): Promise<any[]> {
     const messages = await this.chatService.getConversationHistory(chatId);
+    const memberMetadata = await this.chatService.getMemberMetadata(
+      this.memberId,
+    );
+
     const formattedMessages = messages.map((message) => ({
-      role:
-        message.type === 'SYSTEM'
-          ? 'system'
-          : message.sender?.id === this.memberId
-            ? 'assistant'
-            : 'user',
+      role: this.determineMessageRole(message),
       content: (message.content as any).text ?? '',
     }));
 
+    if (memberMetadata.systemMessage) {
+      formattedMessages.unshift({
+        role: 'system',
+        content: memberMetadata.systemMessage,
+      });
+    }
+
     return formattedMessages;
+  }
+
+  private determineMessageRole(message: any): 'system' | 'assistant' | 'user' {
+    if (message.type === 'SYSTEM') return 'system';
+    return message.sender?.id === this.memberId ? 'assistant' : 'user';
   }
 }
