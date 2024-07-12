@@ -13,10 +13,12 @@ export class PrismaService
 
   async onModuleInit() {
     await this.$connect();
+    console.log('Prisma Client connected to database.');
   }
 
   async onModuleDestroy() {
     await this.$disconnect();
+    console.log('Prisma Client disconnected from database.');
   }
 
   // Member methods

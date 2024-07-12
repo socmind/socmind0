@@ -1,10 +1,10 @@
 // src/seed/seed.module.ts
 import { Module } from '@nestjs/common';
 import { SeedService } from './seed.service';
-import { ChatModule } from 'src/chat/chat.module';
+import { PrismaModule } from 'src/chat/infrastructure/database/prisma.module';
 
 @Module({
-  imports: [ChatModule],
+  imports: [PrismaModule],
   providers: [SeedService],
   exports: [SeedService],
 })

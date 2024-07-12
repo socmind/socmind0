@@ -1,16 +1,24 @@
 // src/seed/seed.service.ts
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/chat/infrastructure/database/prisma.service';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
+  private readonly logger = new Logger(SeedService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async onModuleInit() {
-    await this.seedData();
+    try {
+      await this.seedData();
+    } catch (error) {
+      this.logger.error('Error during seeding:', error);
+    }
   }
 
   async seedData() {
+    this.logger.log('Starting seeding process...');
+
     // Seeding Members
     const flynn = await this.prisma.member.create({
       data: {
@@ -63,6 +71,6 @@ export class SeedService implements OnModuleInit {
       },
     });
 
-    console.log('Seeding finished.');
+    this.logger.log('Seeding finished.');
   }
 }

@@ -12,17 +12,15 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    await this.init();
+    const rabbitmqUrl = this.configService.get<string>('RABBITMQ_URL');
+    this.connection = await amqplib.connect(rabbitmqUrl);
+    this.channel = await this.connection.createChannel();
+    await this.createServiceExchange();
+    console.log('RabbitMQ connection established.');
   }
 
   async onModuleDestroy() {
     await this.closeConnection();
-  }
-
-  async init() {
-    const rabbitmqUrl = this.configService.get<string>('RABBITMQ_URL');
-    this.connection = await amqplib.connect(rabbitmqUrl);
-    this.channel = await this.connection.createChannel();
   }
 
   async closeConnection() {
@@ -42,11 +40,8 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
   async createMemberServiceQueue(memberId: string) {
     const queueName = `${memberId}_service_queue`;
-
     await this.channel.assertQueue(queueName, { durable: true });
     await this.channel.bindQueue(queueName, this.serviceExchange, memberId);
-
-    return queueName;
   }
 
   async createOrAddMembersToGroupChat(chatId: string, memberIds: string[]) {
@@ -66,10 +61,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     for (const memberId of memberIds) {
       const queueName = `${chatId}_${memberId}_queue`;
 
-      // Unbind the queue from the exchange
       await this.channel.unbindQueue(queueName, exchange, '');
-
-      // Delete the queue
       await this.channel.deleteQueue(queueName);
     }
   }
@@ -78,10 +70,14 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     const exchange = `${chatId}_exchange`;
     const messageBuffer = Buffer.from(JSON.stringify(message));
 
-    this.channel.publish(exchange, '', messageBuffer, {
+    const sent = this.channel.publish(exchange, '', messageBuffer, {
       persistent: true,
       contentType: 'application/json',
     });
+
+    if (!sent) {
+      console.warn('Message was not buffered and may not be sent.');
+    }
   }
 
   async consumeMessages(
@@ -89,7 +85,11 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     chatId: string,
     callback: (message: any) => void,
   ) {
+    const exchange = `${chatId}_exchange`;
     const queueName = `${chatId}_${memberId}_queue`;
+    await this.channel.assertExchange(exchange, 'fanout', { durable: true });
+    await this.channel.assertQueue(queueName, { durable: true });
+    await this.channel.bindQueue(queueName, exchange, '');
 
     try {
       await this.channel.consume(queueName, (msg) => {

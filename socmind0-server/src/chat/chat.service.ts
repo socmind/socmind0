@@ -12,7 +12,7 @@ export class ChatService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.createServiceQueues();
+    await this.createServiceQueues();
   }
 
   async sendMessage(
@@ -213,7 +213,7 @@ export class ChatService implements OnModuleInit {
     );
     await Promise.all(serviceQueueCreationPromises);
 
-    console.log('Initialized service queues for all existing members.');
+    console.log('Service queues initialized for all existing members.');
   }
 
   async getChatMetadata(chatId: string) {
