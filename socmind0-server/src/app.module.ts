@@ -5,8 +5,8 @@ import { ChatModule } from './chat/chat.module';
 import { GptModule } from './agents/gpt/gpt.module';
 import { PrismaModule } from './chat/infrastructure/database/prisma.module';
 import { RabbitMQModule } from './chat/infrastructure/message-broker/rabbitmq.module';
-// import { UserModule } from './user/user.module';
-// import { SeedModule } from './seed/seed.module';
+import { UserModule } from './user/user.module';
+import { SeedModule } from './seed/seed.module';
 
 @Module({
   imports: [
@@ -17,8 +17,8 @@ import { RabbitMQModule } from './chat/infrastructure/message-broker/rabbitmq.mo
     RabbitMQModule,
     ChatModule,
     GptModule,
-    // UserModule,
-    // SeedModule,
+    UserModule,
+    SeedModule,
   ],
 })
 export class AppModule {}
