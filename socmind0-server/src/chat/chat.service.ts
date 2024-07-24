@@ -26,23 +26,32 @@ export class ChatService implements OnModuleInit {
     const { senderId, prismaTransaction } = options || {};
 
     // Determine the message type based on the presence of senderId
-    const messageType: MessageType = senderId ? 'MEMBER' : 'SYSTEM';
+    const type: MessageType = senderId ? 'MEMBER' : 'SYSTEM';
 
     // Create the message data
     const messageData: Prisma.MessageCreateInput = {
       chat: { connect: { id: chatId } },
       content: content,
-      type: messageType,
+      type: type,
     };
 
     // If senderId is provided, add it to the message data
     if (senderId) {
+      // Check if the Member exists before connecting
+      const memberExists = await this.prismaService.member.findUnique({
+        where: { id: senderId },
+      });
+
+      if (!memberExists) {
+        throw new Error(`Member with id ${senderId} not found.`);
+      }
+
       messageData.sender = { connect: { id: senderId } };
     }
 
     const rabbitMQMessage = {
       content,
-      messageType,
+      type,
       chatId,
       ...(senderId && { senderId }),
     };
@@ -132,7 +141,7 @@ export class ChatService implements OnModuleInit {
     memberId: string,
     messageHandler: (message: any) => void,
   ) {
-    const chats = await this.prismaService.getUserChats(memberId);
+    const chats = await this.getMemberChats(memberId);
 
     const initializationPromises = chats.map((chat) =>
       this.initQueueConsumption(memberId, chat.id, messageHandler),
@@ -214,6 +223,11 @@ export class ChatService implements OnModuleInit {
     await Promise.all(serviceQueueCreationPromises);
 
     console.log('Service queues initialized for all existing members.');
+  }
+
+  async getMemberChats(memberId: string) {
+    const chats = await this.prismaService.getMemberChats(memberId);
+    return chats;
   }
 
   async getChatMetadata(chatId: string) {

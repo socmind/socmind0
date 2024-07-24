@@ -6,7 +6,6 @@ import { GptModule } from './agents/gpt/gpt.module';
 import { PrismaModule } from './chat/infrastructure/database/prisma.module';
 import { RabbitMQModule } from './chat/infrastructure/message-broker/rabbitmq.module';
 import { UserModule } from './user/user.module';
-import { SeedModule } from './seed/seed.module';
 
 @Module({
   imports: [
@@ -18,7 +17,6 @@ import { SeedModule } from './seed/seed.module';
     ChatModule,
     GptModule,
     UserModule,
-    SeedModule,
   ],
 })
 export class AppModule {}

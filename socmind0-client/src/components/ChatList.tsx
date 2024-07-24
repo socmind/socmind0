@@ -7,7 +7,11 @@ import { Socket, io } from 'socket.io-client';
 
 interface Chat {
   id: string;
-  name: string;
+  name: string | null;
+  context: string | null;
+  conclusion: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export default function ChatList() {
@@ -26,9 +30,19 @@ export default function ChatList() {
     });
 
     // Fetch initial list of chats
-    fetch('http://localhost:3001/api/chats')
-      .then((res) => res.json())
-      .then((data) => setChats(data));
+    console.log('Fetching chats...');
+    fetch('http://localhost:3001/api/users/flynn/chats')
+      .then((res) => {
+        console.log('Fetch response:', res);
+        return res.json();
+      })
+      .then((data: Chat[]) => {
+        console.log('Fetched chats:', data);
+        setChats(data);
+      })
+      .catch((error) => {
+        console.error('Error fetching chats:', error);
+      });
 
     return () => {
       newSocket.disconnect();
@@ -38,6 +52,8 @@ export default function ChatList() {
   const handleChatClick = (chatId: string) => {
     router.push(`/chat/${chatId}`);
   };
+
+  console.log('Current chats:', chats);
 
   return (
     <div className="w-1/4 bg-gray-100 p-4">
@@ -49,7 +65,7 @@ export default function ChatList() {
             className="cursor-pointer hover:bg-gray-200 p-2 rounded"
             onClick={() => handleChatClick(chat.id)}
           >
-            {chat.name}
+            {chat.name || chat.id}
           </li>
         ))}
       </ul>

@@ -7,7 +7,13 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatService } from 'src/chat/chat.service';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+})
 export class UserGateway {
   @WebSocketServer()
   server: Server;
@@ -31,7 +37,13 @@ export class UserGateway {
 
     // Fetch and send chat history
     const history = await this.chatService.getConversationHistory(chatId);
-    client.emit('chatHistory', history);
+    const formattedMessages = history.map((message) => ({
+      content: message.content,
+      messageType: message.type,
+      chatId: message.chatId,
+      senderId: message.senderId || undefined,
+    }));
+    client.emit('chatHistory', formattedMessages);
   }
 
   @SubscribeMessage('sendMessage')
@@ -51,10 +63,16 @@ export class UserGateway {
     );
   }
 
-  sendMessageToUser(userId: string, chatId: string, message: any) {
+  sendMessageToUser(userId: string, message: any) {
+    const formattedMessage = {
+      content: message.content,
+      messageType: message.type,
+      chatId: message.chatId,
+      senderId: message.senderId || undefined,
+    };
     const userSocket = this.userSockets.get(userId);
     if (userSocket) {
-      userSocket.emit('newMessage', { chatId, message });
+      userSocket.emit('newMessage', formattedMessage);
     }
   }
 

@@ -29,10 +29,8 @@ export class UserService {
       return;
     }
 
-    const chatId = message.chatId;
-
     // Emit the received message to the connected client
-    this.userGateway.sendMessageToUser(this.memberId, chatId, message);
+    this.userGateway.sendMessageToUser(this.memberId, message);
   }
 
   async handleServiceMessage(message: any) {
