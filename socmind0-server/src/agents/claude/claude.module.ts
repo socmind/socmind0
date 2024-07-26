@@ -1,20 +1,17 @@
-// claude.module.ts
+// src/agents/claude/claude.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ClaudeState } from './claude.state';
 import { ClaudeService } from './claude.service';
-import { ClaudeController } from './claude.controller';
-import { RabbitMQModule } from 'src/chat/infrastructure/message-broker/rabbitmq.module';
+import { ChatModule } from 'src/chat/chat.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    RabbitMQModule,
+    ChatModule,
   ],
-  controllers: [ClaudeController],
   providers: [ClaudeService, ClaudeState],
-  exports: [ClaudeService, ClaudeState],
 })
 export class ClaudeModule {}

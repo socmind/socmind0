@@ -15,6 +15,7 @@ export class ChatService implements OnModuleInit {
     await this.createServiceQueues();
   }
 
+  // Main methods
   async sendMessage(
     chatId: string,
     content: any,
@@ -25,27 +26,21 @@ export class ChatService implements OnModuleInit {
   ): Promise<string> {
     const { senderId, prismaTransaction } = options || {};
 
-    // Determine the message type based on the presence of senderId
     const type: MessageType = senderId ? 'MEMBER' : 'SYSTEM';
 
-    // Create the message data
     const messageData: Prisma.MessageCreateInput = {
       chat: { connect: { id: chatId } },
       content: content,
       type: type,
     };
 
-    // If senderId is provided, add it to the message data
     if (senderId) {
-      // Check if the Member exists before connecting
       const memberExists = await this.prismaService.member.findUnique({
         where: { id: senderId },
       });
-
       if (!memberExists) {
         throw new Error(`Member with id ${senderId} not found.`);
       }
-
       messageData.sender = { connect: { id: senderId } };
     }
 
@@ -62,7 +57,7 @@ export class ChatService implements OnModuleInit {
       });
 
       try {
-        await this.rabbitMQService.sendMessage(chatId, rabbitMQMessage);
+        await this.rabbitMQService.sendMessage(rabbitMQMessage);
       } catch (error) {
         console.error('Failed to send message to RabbitMQ:', error);
         throw error;
@@ -83,9 +78,7 @@ export class ChatService implements OnModuleInit {
     name?: string,
     context?: string,
   ): Promise<string> {
-    // Start a transaction to ensure database consistency
     return this.prismaService.$transaction(async (prisma) => {
-      // Prepare the chat data
       const chatData: Prisma.ChatCreateInput = {
         members: {
           create: memberIds.map((memberId) => ({
@@ -94,7 +87,6 @@ export class ChatService implements OnModuleInit {
         },
       };
 
-      // Only add name and context if they are provided
       if (name !== undefined) {
         chatData.name = name;
       }
@@ -102,7 +94,6 @@ export class ChatService implements OnModuleInit {
         chatData.context = context;
       }
 
-      // Create the chat in the database
       const chat = await prisma.chat.create({
         data: chatData,
         include: {
@@ -110,7 +101,6 @@ export class ChatService implements OnModuleInit {
         },
       });
 
-      // Set up RabbitMQ exchange and queues for the chat
       await this.rabbitMQService.createOrAddMembersToGroupChat(
         chat.id,
         memberIds,
@@ -137,6 +127,75 @@ export class ChatService implements OnModuleInit {
     });
   }
 
+  async addMemberToChat(
+    chatId: string,
+    memberId: string,
+    chatInstructions?: string,
+  ): Promise<void> {
+    await this.prismaService.$transaction(async (prisma) => {
+      const chatMember = await prisma.chatMember.create({
+        data: {
+          chat: { connect: { id: chatId } },
+          member: { connect: { id: memberId } },
+          chatInstructions,
+        },
+        include: {
+          member: true,
+          chat: true,
+        },
+      });
+
+      await this.rabbitMQService.createOrAddMembersToGroupChat(chatId, [
+        memberId,
+      ]);
+
+      await this.rabbitMQService.createMemberServiceQueue(memberId);
+
+      await this.sendMessage(
+        chatId,
+        { text: `${chatMember.member.name} has joined the chat.` },
+        { prismaTransaction: prisma },
+      );
+    });
+  }
+
+  // Message broker methods
+  async createServiceQueues() {
+    await this.rabbitMQService.createServiceExchange();
+
+    const members = await this.prismaService.getAllMembers();
+    const serviceQueueCreationPromises = members.map((member) =>
+      this.rabbitMQService.createMemberServiceQueue(member.id),
+    );
+    await Promise.all(serviceQueueCreationPromises);
+
+    console.log('Service queues initialized for all existing members.');
+  }
+
+  async initServiceQueueConsumption(
+    memberId: string,
+    serviceMessageHandler: (message: any) => void,
+  ) {
+    await this.rabbitMQService.consumeServiceMessage(
+      memberId,
+      serviceMessageHandler,
+    );
+
+    console.log(`Service queue initialized for member ${memberId}.`);
+  }
+
+  async initQueueConsumption(
+    memberId: string,
+    chatId: string,
+    messageHandler: (message: any) => void,
+  ) {
+    await this.rabbitMQService.consumeMessages(
+      memberId,
+      chatId,
+      messageHandler,
+    );
+  }
+
   async initAllQueuesConsumption(
     memberId: string,
     messageHandler: (message: any) => void,
@@ -152,87 +211,10 @@ export class ChatService implements OnModuleInit {
     console.log(`Chat queues initialized for member ${memberId}.`);
   }
 
-  async initQueueConsumption(
-    memberId: string,
-    chatId: string,
-    messageHandler: (message: any) => void,
-  ) {
-    await this.rabbitMQService.consumeMessages(
-      memberId,
-      chatId,
-      messageHandler,
-    );
-  }
-
-  async initServiceQueueConsumption(
-    memberId: string,
-    serviceMessageHandler: (message: any) => void,
-  ) {
-    await this.rabbitMQService.consumeServiceMessage(
-      memberId,
-      serviceMessageHandler,
-    );
-
-    console.log(`Service queue initialized for member ${memberId}.`);
-  }
-
-  async addMemberToChat(
-    chatId: string,
-    memberId: string,
-    chatInstructions?: string,
-  ): Promise<void> {
-    // Start a transaction to ensure database consistency
-    await this.prismaService.$transaction(async (prisma) => {
-      // Add the member to the chat in the database
-      const chatMember = await prisma.chatMember.create({
-        data: {
-          chat: { connect: { id: chatId } },
-          member: { connect: { id: memberId } },
-          chatInstructions,
-        },
-        include: {
-          member: true,
-          chat: true,
-        },
-      });
-
-      // Set up RabbitMQ queue for the new member
-      await this.rabbitMQService.createOrAddMembersToGroupChat(chatId, [
-        memberId,
-      ]);
-
-      // Create service queue for the new member if it doesn't exist
-      await this.rabbitMQService.createMemberServiceQueue(memberId);
-
-      // Use sendMessage to create a system message announcing the new member
-      await this.sendMessage(
-        chatId,
-        { text: `${chatMember.member.name} has joined the chat.` },
-        { prismaTransaction: prisma },
-      );
-    });
-  }
-
-  async createServiceQueues() {
-    await this.rabbitMQService.createServiceExchange();
-
-    const members = await this.prismaService.getAllMembers();
-    const serviceQueueCreationPromises = members.map((member) =>
-      this.rabbitMQService.createMemberServiceQueue(member.id),
-    );
-    await Promise.all(serviceQueueCreationPromises);
-
-    console.log('Service queues initialized for all existing members.');
-  }
-
+  // Database methods
   async getMemberChats(memberId: string) {
     const chats = await this.prismaService.getMemberChats(memberId);
     return chats;
-  }
-
-  async getChatMetadata(chatId: string) {
-    const chatMetadata = await this.prismaService.getChatMetadata(chatId);
-    return chatMetadata;
   }
 
   async getMemberMetadata(memberId: string) {

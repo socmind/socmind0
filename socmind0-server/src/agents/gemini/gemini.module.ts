@@ -1,20 +1,17 @@
-// gemini.module.ts
+// src/agents/gemini/gemini.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ChatModule } from 'src/chat/chat.module';
 import { GeminiState } from './gemini.state';
 import { GeminiService } from './gemini.service';
-import { GeminiController } from './gemini.controller';
-import { RabbitMQModule } from 'src/chat/infrastructure/message-broker/rabbitmq.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    RabbitMQModule,
+    ChatModule,
   ],
-  controllers: [GeminiController],
   providers: [GeminiService, GeminiState],
-  exports: [GeminiService, GeminiState],
 })
 export class GeminiModule {}

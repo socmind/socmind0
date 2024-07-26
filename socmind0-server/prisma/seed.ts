@@ -30,9 +30,35 @@ async function main() {
     },
   });
 
+  const claudia = await prisma.member.upsert({
+    where: { id: 'claude-3.5' },
+    update: {},
+    create: {
+      id: 'claude-3.5',
+      name: 'Claudia',
+      username: 'claude-3.5',
+      systemMessage: 'Your name is Claudia.',
+      type: MemberType.PROGRAM,
+    },
+  });
+
+  const george = await prisma.member.upsert({
+    where: { id: 'gemini-1.5' },
+    update: {},
+    create: {
+      id: 'gemini-1.5',
+      name: 'George',
+      username: 'gemini-1.5',
+      systemMessage: 'Your name is George.',
+      type: MemberType.PROGRAM,
+    },
+  });
+
   console.log('Seeded members:');
   console.log('Flynn:', flynn);
   console.log('Charles:', charles);
+  console.log('Claudia:', claudia);
+  console.log('George:', george);
 
   // Seeding Chats
   const chat1 = await prisma.chat.create({
@@ -40,7 +66,12 @@ async function main() {
       name: 'First Chat',
       context: 'Hello all.',
       members: {
-        create: [{ memberId: flynn.id }, { memberId: charles.id }],
+        create: [
+          { memberId: flynn.id },
+          { memberId: charles.id },
+          { memberId: claudia.id },
+          { memberId: george.id },
+        ],
       },
       messages: {
         create: [

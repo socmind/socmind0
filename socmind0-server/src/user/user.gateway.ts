@@ -35,7 +35,6 @@ export class UserGateway {
   async handleJoinChat(client: Socket, chatId: string) {
     client.join(chatId);
 
-    // Fetch and send chat history
     const history = await this.chatService.getConversationHistory(chatId);
     const formattedMessages = history.map((message) => ({
       content: message.content,
@@ -43,6 +42,7 @@ export class UserGateway {
       chatId: message.chatId,
       senderId: message.senderId || undefined,
     }));
+
     client.emit('chatHistory', formattedMessages);
   }
 

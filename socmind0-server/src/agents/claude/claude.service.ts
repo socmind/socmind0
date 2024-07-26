@@ -1,53 +1,59 @@
-// claude.service.ts
+// src/agents/claude/claude.service.ts
 import { Injectable } from '@nestjs/common';
+import { ChatService } from 'src/chat/chat.service';
 import { ClaudeState } from './claude.state';
-import Anthropic from '@anthropic-ai/sdk';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ClaudeService {
-  private anthropic: Anthropic;
+  private readonly memberId = 'claude-3.5';
 
   constructor(
+    private readonly chatService: ChatService,
     private readonly claudeState: ClaudeState,
-    private readonly configService: ConfigService,
-  ) {
-    const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
-    this.anthropic = new Anthropic({ apiKey });
+  ) {}
+
+  async onModuleInit() {
+    await this.chatService.initAllQueuesConsumption(
+      this.memberId,
+      this.handleMessage.bind(this),
+    );
+
+    await this.chatService.initServiceQueueConsumption(
+      this.memberId,
+      this.handleServiceMessage.bind(this),
+    );
   }
 
-  async reply(message: any): Promise<any> {
+  async handleMessage(message: any) {
+    if (message.senderId === this.memberId) {
+      return;
+    }
+
+    const chatId = message.chatId;
+
     try {
-      this.claudeState.transformAndAddMessage(message);
+      const reply = await this.claudeState.reply(chatId);
 
-      const response = await this.anthropic.messages.create({
-        max_tokens: 1024,
-        system: this.claudeState.getSystemPrompt(),
-        messages: this.claudeState.getFormattedMessages(),
-        model: 'claude-3-opus-20240229',
-      });
-
-      // const text = response.content[0].text;
-
-      let text = '';
-      const contentBlock = response.content[0];
-
-      if (contentBlock.type === 'text') {
-        text += contentBlock.text;
-      } else {
-        text += `Calling tool '${contentBlock.name}' with input '${JSON.stringify(contentBlock.input)}'.`;
-      }
-
-      if (text === '') {
+      if (!reply) {
         return;
-      } else {
-        this.claudeState.addMessage(response);
-        // console.log(this.claudeState.getFormattedMessages());
-        return { role: 'user', content: text };
       }
+
+      this.chatService.sendMessage(chatId, reply, { senderId: this.memberId });
     } catch (error) {
-      console.error('Error calling Anthropic:', error);
-      throw new Error('Failed to get response from Claude.');
+      console.error('Failed to process message:', error.message);
+    }
+  }
+
+  async handleServiceMessage(message: any) {
+    if (message.notification == 'NEW_CHAT' && message.chatId) {
+      await this.chatService.initQueueConsumption(
+        this.memberId,
+        message.chatId,
+        this.handleMessage.bind(this),
+      );
+      console.log(
+        `Queue to chat ${message.chatId} initialized for member ${this.memberId}.`,
+      );
     }
   }
 }

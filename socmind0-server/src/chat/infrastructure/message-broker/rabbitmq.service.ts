@@ -16,14 +16,10 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     this.connection = await amqplib.connect(rabbitmqUrl);
     this.channel = await this.connection.createChannel();
     await this.createServiceExchange();
-    console.log('RabbitMQ connection established.');
+    console.log('RabbitMQ initialized.');
   }
 
   async onModuleDestroy() {
-    await this.closeConnection();
-  }
-
-  async closeConnection() {
     if (this.channel) {
       await this.channel.close();
     }
@@ -32,6 +28,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  // Exchange and queue creation/deletion
   async createServiceExchange() {
     await this.channel.assertExchange(this.serviceExchange, 'direct', {
       durable: true,
@@ -66,20 +63,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async sendMessage(chatId: string, message: any) {
-    const exchange = `${chatId}_exchange`;
-    const messageBuffer = Buffer.from(JSON.stringify(message));
-
-    const sent = this.channel.publish(exchange, '', messageBuffer, {
-      persistent: true,
-      contentType: 'application/json',
-    });
-
-    if (!sent) {
-      console.warn('Message was not buffered and may not be sent.');
-    }
-  }
-
+  // Consumption
   async consumeMessages(
     memberId: string,
     chatId: string,
@@ -112,15 +96,6 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async sendServiceMessage(memberId: string, message: any) {
-    const messageBuffer = Buffer.from(JSON.stringify(message));
-
-    this.channel.publish(this.serviceExchange, memberId, messageBuffer, {
-      persistent: true,
-      contentType: 'application/json',
-    });
-  }
-
   async consumeServiceMessage(
     memberId: string,
     callback: (message: any) => void,
@@ -133,6 +108,34 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         callback(content);
         this.channel.ack(msg);
       }
+    });
+  }
+
+  // Publishing
+  async sendMessage(message: any) {
+    if (message?.chatId === undefined) {
+      throw new Error('Missing message.chatId.');
+    }
+
+    const exchange = `${message.chatId}_exchange`;
+    const messageBuffer = Buffer.from(JSON.stringify(message));
+
+    const sent = this.channel.publish(exchange, '', messageBuffer, {
+      persistent: true,
+      contentType: 'application/json',
+    });
+
+    if (!sent) {
+      console.warn('Message was not sent.');
+    }
+  }
+
+  async sendServiceMessage(memberId: string, message: any) {
+    const messageBuffer = Buffer.from(JSON.stringify(message));
+
+    this.channel.publish(this.serviceExchange, memberId, messageBuffer, {
+      persistent: true,
+      contentType: 'application/json',
     });
   }
 }

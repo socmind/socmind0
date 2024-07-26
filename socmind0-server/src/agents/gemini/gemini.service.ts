@@ -1,30 +1,59 @@
-// gemini.service.ts
+// src/agents/gemini/gemini.service.ts
 import { Injectable } from '@nestjs/common';
+import { ChatService } from 'src/chat/chat.service';
 import { GeminiState } from './gemini.state';
 
 @Injectable()
 export class GeminiService {
-  constructor(private readonly geminiState: GeminiState) {}
+  private readonly memberId = 'gemini-1.5';
 
-  async reply(message: any): Promise<any> {
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly geminiState: GeminiState,
+  ) {}
+
+  async onModuleInit() {
+    await this.chatService.initAllQueuesConsumption(
+      this.memberId,
+      this.handleMessage.bind(this),
+    );
+
+    await this.chatService.initServiceQueueConsumption(
+      this.memberId,
+      this.handleServiceMessage.bind(this),
+    );
+  }
+
+  async handleMessage(message: any) {
+    if (message.senderId === this.memberId) {
+      return;
+    }
+
+    const chatId = message.chatId;
+
     try {
-      const chat = this.geminiState.getChat();
-      if (message.content) {
-        const result = await chat.sendMessage(message.content);
-        const text = result.response.text();
-        if (text === '') {
-          return;
-        } else {
-          // const history = await this.geminiState.getMemory();
-          // console.log(JSON.stringify(history, null, 2));
-          return { role: 'user', content: text };
-        }
-      } else {
-        throw new Error('Gemini error: content field missing from message.');
+      const reply = await this.geminiState.reply(chatId);
+
+      if (!reply) {
+        return;
       }
+
+      this.chatService.sendMessage(chatId, reply, { senderId: this.memberId });
     } catch (error) {
-      console.error('Error calling Gemini:', error);
-      throw new Error('Failed to get response from Gemini.');
+      console.error('Failed to process message:', error.message);
+    }
+  }
+
+  async handleServiceMessage(message: any) {
+    if (message.notification == 'NEW_CHAT' && message.chatId) {
+      await this.chatService.initQueueConsumption(
+        this.memberId,
+        message.chatId,
+        this.handleMessage.bind(this),
+      );
+      console.log(
+        `Queue to chat ${message.chatId} initialized for member ${this.memberId}.`,
+      );
     }
   }
 }
