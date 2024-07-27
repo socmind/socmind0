@@ -151,6 +151,11 @@ export class ChatService implements OnModuleInit {
 
       await this.rabbitMQService.createMemberServiceQueue(memberId);
 
+      await this.rabbitMQService.sendServiceMessage(memberId, {
+        notification: 'NEW_CHAT',
+        chatId: chatId,
+      });
+
       await this.sendMessage(
         chatId,
         { text: `${chatMember.member.name} has joined the chat.` },
@@ -163,13 +168,13 @@ export class ChatService implements OnModuleInit {
   async createServiceQueues() {
     await this.rabbitMQService.createServiceExchange();
 
-    const members = await this.prismaService.getAllMembers();
+    const members = await this.getAllMembers();
     const serviceQueueCreationPromises = members.map((member) =>
       this.rabbitMQService.createMemberServiceQueue(member.id),
     );
     await Promise.all(serviceQueueCreationPromises);
 
-    console.log('Service queues initialized for all existing members.');
+    console.log('Service queues created for all existing members.');
   }
 
   async initServiceQueueConsumption(
@@ -181,7 +186,7 @@ export class ChatService implements OnModuleInit {
       serviceMessageHandler,
     );
 
-    console.log(`Service queue initialized for member ${memberId}.`);
+    console.log(`${memberId} listening to service exchange.`);
   }
 
   async initQueueConsumption(
@@ -212,6 +217,11 @@ export class ChatService implements OnModuleInit {
   }
 
   // Database methods
+  async getAllMembers() {
+    const members = await this.prismaService.getAllMembers();
+    return members;
+  }
+
   async getMemberChats(memberId: string) {
     const chats = await this.prismaService.getMemberChats(memberId);
     return chats;

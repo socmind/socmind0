@@ -36,40 +36,14 @@ export class PrismaService
   }
 
   async getChatMembers(chatId: string) {
-    return this.chatMember.findMany({
+    return await this.chatMember.findMany({
       where: { chatId },
       include: { member: true },
     });
   }
 
-  // Member methods
-  async getAllMembers(): Promise<{ id: string }[]> {
-    return this.member.findMany({
-      select: {
-        id: true,
-      },
-    });
-  }
-
-  async createMember(data: Prisma.MemberCreateInput): Promise<string> {
-    const member = await this.member.create({ data });
-    return member.id;
-  }
-
-  async getMember(id: string) {
-    return this.member.findUnique({ where: { id } });
-  }
-
-  async updateMember(id: string, data: Prisma.MemberUpdateInput) {
-    return this.member.update({ where: { id }, data });
-  }
-
-  async deleteMember(id: string) {
-    return this.member.delete({ where: { id } });
-  }
-
   async getMemberChats(memberId: string) {
-    return this.chat.findMany({
+    return await this.chat.findMany({
       where: {
         members: {
           some: {
@@ -78,5 +52,27 @@ export class PrismaService
         },
       },
     });
+  }
+
+  // Member methods
+  async getAllMembers() {
+    return await this.member.findMany();
+  }
+
+  async createMember(data: Prisma.MemberCreateInput): Promise<string> {
+    const member = await this.member.create({ data });
+    return member.id;
+  }
+
+  async getMember(id: string) {
+    return await this.member.findUnique({ where: { id } });
+  }
+
+  async updateMember(id: string, data: Prisma.MemberUpdateInput) {
+    return await this.member.update({ where: { id }, data });
+  }
+
+  async deleteMember(id: string) {
+    return await this.member.delete({ where: { id } });
   }
 }
