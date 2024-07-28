@@ -42,6 +42,13 @@ export class GeminiState {
       const formattedMessages = await this.getConversation(chatId);
       const systemMessage = await this.getSystemMessage();
 
+      if (
+        formattedMessages.length > 0 &&
+        formattedMessages[formattedMessages.length - 1].role === 'model'
+      ) {
+        return;
+      }
+
       const modelOptions: {
         model: string;
         systemInstruction?: string;
@@ -61,7 +68,7 @@ export class GeminiState {
 
       const message = result.response.text();
 
-      if (message === '') {
+      if (message.trim() === '') {
         return;
       } else {
         return { text: message };

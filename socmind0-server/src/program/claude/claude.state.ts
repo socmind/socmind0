@@ -66,6 +66,13 @@ export class ClaudeState {
       const formattedMessages = await this.getConversation(chatId);
       const systemMessage = await this.getSystemMessage();
 
+      if (
+        formattedMessages.length > 0 &&
+        formattedMessages[formattedMessages.length - 1].role === 'assistant'
+      ) {
+        return;
+      }
+
       const requestBody: {
         model: string;
         messages: any;
@@ -91,7 +98,7 @@ export class ClaudeState {
         text += `Calling tool '${contentBlock.name}' with input '${JSON.stringify(contentBlock.input)}'.`;
       }
 
-      if (text === '') {
+      if (text.trim() === '') {
         return;
       } else {
         return { text: text };

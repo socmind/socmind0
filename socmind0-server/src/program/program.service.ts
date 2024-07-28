@@ -63,11 +63,9 @@ export class ProgramService implements OnModuleInit {
       const replyFunction = this.getReplyFunction(memberId);
       const reply = await replyFunction(chatId);
 
-      if (!reply) {
-        return;
+      if (reply) {
+        this.chatService.sendMessage(chatId, reply, { senderId: memberId });
       }
-
-      this.chatService.sendMessage(chatId, reply, { senderId: memberId });
     } catch (error) {
       console.error('Failed to handle message:', error.message);
     }

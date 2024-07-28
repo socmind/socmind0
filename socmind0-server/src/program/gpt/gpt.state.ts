@@ -47,6 +47,13 @@ export class GptState {
     try {
       const formattedMessages = await this.getConversation(chatId);
 
+      if (
+        formattedMessages.length > 0 &&
+        formattedMessages[formattedMessages.length - 1].role === 'assistant'
+      ) {
+        return;
+      }
+
       const response = await this.openAi.chat.completions.create({
         model: 'gpt-4o',
         messages: formattedMessages,
@@ -55,7 +62,7 @@ export class GptState {
       if (response.choices.length > 0) {
         const message = response.choices[0].message;
 
-        if (message.content === '') {
+        if (message.content.trim() === '') {
           return;
         } else {
           return { text: message.content };
