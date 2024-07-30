@@ -4,11 +4,20 @@ import { ChatService } from 'src/chat/chat.service';
 import { GptState } from './gpt/gpt.state';
 import { ClaudeState } from './claude/claude.state';
 import { GeminiState } from './gemini/gemini.state';
+import { setTimeout } from 'timers/promises';
+
+interface QueueItem {
+  memberId: string;
+  message: any;
+}
 
 @Injectable()
 export class ProgramService implements OnModuleInit {
   private memberIds: string[] = [];
   private programStates: Map<string, any> = new Map();
+  private currentDelay: number = 0;
+  private isPaused: boolean = false;
+  private waitingQueue: QueueItem[] = [];
 
   constructor(
     private readonly chatService: ChatService,
@@ -59,6 +68,14 @@ export class ProgramService implements OnModuleInit {
 
     const chatId = message.chatId;
 
+    if (this.isPaused) {
+      this.waitingQueue.push({ memberId, message });
+      console.log('handleMessage paused.');
+      return;
+    }
+
+    this.applyDelay();
+
     try {
       const replyFunction = this.getReplyFunction(memberId);
       const reply = await replyFunction(chatId);
@@ -81,6 +98,35 @@ export class ProgramService implements OnModuleInit {
       console.log(
         `Queue to chat ${message.chatId} initialized for member ${memberId}.`,
       );
+    }
+  }
+
+  async applyDelay(): Promise<void> {
+    if (this.currentDelay > 0) {
+      await setTimeout(this.currentDelay);
+    }
+  }
+
+  setDelay(delay: number): void {
+    this.currentDelay = delay;
+  }
+
+  pause() {
+    this.isPaused = true;
+    console.log('Message handling paused.');
+  }
+
+  async resume() {
+    this.isPaused = false;
+    console.log(
+      `Message handling resumed with delay of ${this.currentDelay} milliseconds.`,
+    );
+
+    while (this.waitingQueue.length > 0) {
+      const item = this.waitingQueue.shift();
+      if (item) {
+        await this.handleMessage(item.memberId, item.message);
+      }
     }
   }
 }

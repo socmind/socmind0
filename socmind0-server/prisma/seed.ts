@@ -25,7 +25,8 @@ async function main() {
       id: 'gpt-4o',
       name: 'Charles',
       username: 'gpt-4o',
-      systemMessage: 'Your name is Charles.',
+      systemMessage:
+        'Your name is Charles. Prepend "Charles: " to all of your replies.',
       type: MemberType.PROGRAM,
     },
   });
@@ -37,7 +38,8 @@ async function main() {
       id: 'claude-3.5',
       name: 'Claudia',
       username: 'claude-3.5',
-      systemMessage: 'Your name is Claudia.',
+      systemMessage:
+        'Your name is Claudia. Prepend "Claudia: " to all of your replies.',
       type: MemberType.PROGRAM,
     },
   });
@@ -49,7 +51,8 @@ async function main() {
       id: 'gemini-1.5',
       name: 'George',
       username: 'gemini-1.5',
-      systemMessage: 'Your name is George.',
+      systemMessage:
+        'Your name is George. Prepend "George: " to all of your replies.',
       type: MemberType.PROGRAM,
     },
   });

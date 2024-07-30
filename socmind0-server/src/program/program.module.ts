@@ -6,6 +6,7 @@ import { ProgramService } from './program.service';
 import { GptState } from './gpt/gpt.state';
 import { ClaudeState } from './claude/claude.state';
 import { GeminiState } from './gemini/gemini.state';
+import { ProgramController } from './program.controller';
 
 @Module({
   imports: [
@@ -15,5 +16,6 @@ import { GeminiState } from './gemini/gemini.state';
     ChatModule,
   ],
   providers: [ProgramService, GptState, ClaudeState, GeminiState],
+  controllers: [ProgramController],
 })
 export class ProgramModule {}
