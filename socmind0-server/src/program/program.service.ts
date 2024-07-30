@@ -18,6 +18,7 @@ export class ProgramService implements OnModuleInit {
   private currentDelay: number = 0;
   private isPaused: boolean = false;
   private waitingQueue: QueueItem[] = [];
+  private activeReplies: Map<string, Set<string>> = new Map();
 
   constructor(
     private readonly chatService: ChatService,
@@ -61,6 +62,21 @@ export class ProgramService implements OnModuleInit {
     return programState.reply.bind(programState);
   }
 
+  isReplying(memberId: string, chatId: string): boolean {
+    return this.activeReplies.get(memberId)?.has(chatId) || false;
+  }
+
+  private setReplying(memberId: string, chatId: string, value: boolean) {
+    if (!this.activeReplies.has(memberId)) {
+      this.activeReplies.set(memberId, new Set());
+    }
+    if (value) {
+      this.activeReplies.get(memberId)!.add(chatId);
+    } else {
+      this.activeReplies.get(memberId)!.delete(chatId);
+    }
+  }
+
   async handleMessage(memberId: string, message: any) {
     if (message.senderId === memberId) {
       return;
@@ -74,9 +90,16 @@ export class ProgramService implements OnModuleInit {
       return;
     }
 
-    this.applyDelay();
+    if (this.isReplying(memberId, chatId)) {
+      console.log(`${memberId} is already replying to chat ${chatId}.`);
+      return;
+    }
+
+    this.setReplying(memberId, chatId, true);
 
     try {
+      this.applyDelay();
+
       const replyFunction = this.getReplyFunction(memberId);
       const reply = await replyFunction(chatId);
 
@@ -85,6 +108,8 @@ export class ProgramService implements OnModuleInit {
       }
     } catch (error) {
       console.error('Failed to handle message:', error.message);
+    } finally {
+      this.setReplying(memberId, chatId, false);
     }
   }
 
