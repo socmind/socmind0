@@ -1,13 +1,15 @@
-// src/program/gpt/gpt.state.ts
+// src/program/admin/admin.state.ts
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from 'src/chat/chat.service';
 import OpenAI from 'openai';
 
 @Injectable()
-export class GptState {
-  private readonly memberId = 'gpt-4o';
+export class AdminState {
+  private readonly memberId = 'admin';
   private readonly openAi: OpenAI;
+  private readonly createChatPrompt = 'tbd';
+  private readonly conclusionPrompt = 'tbd';
 
   constructor(
     private readonly configService: ConfigService,
@@ -47,25 +49,36 @@ export class GptState {
     try {
       const formattedMessages = await this.getConversation(chatId);
 
-      if (
-        formattedMessages.length > 0 &&
-        formattedMessages[formattedMessages.length - 1].role === 'assistant'
-      ) {
-        return;
-      }
-
       const response = await this.openAi.chat.completions.create({
         model: 'gpt-4o',
         messages: formattedMessages,
+        response_format: { type: 'json_object' },
       });
 
       if (response.choices.length > 0) {
         const message = response.choices[0].message;
+        console.log('Admin message: ', message.content);
 
         if (message.content.trim() === '') {
           return;
+        }
+
+        const messageObject = JSON.parse(message.content);
+
+        if (messageObject.command === this.createChatPrompt) {
+          const memberIds = messageObject.messageIds;
+          const name = messageObject.name;
+          const context = messageObject.instruction;
+          const chat = await this.chatService.createGroupChat(
+            memberIds,
+            name,
+            context,
+          );
+          return {
+            text: `Chat ${chat.id} created with parameters ${message.content}.`,
+          };
         } else {
-          return { text: message.content };
+          return;
         }
       } else {
         throw new Error('No content received from OpenAI.');

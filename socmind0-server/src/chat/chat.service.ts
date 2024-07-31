@@ -16,16 +16,7 @@ export class ChatService implements OnModuleInit {
   }
 
   // Main methods
-  async sendMessage(
-    chatId: string,
-    content: any,
-    options?: {
-      senderId?: string;
-      prismaTransaction?: Prisma.TransactionClient;
-    },
-  ): Promise<string> {
-    const { senderId, prismaTransaction } = options || {};
-
+  async sendMessage(chatId: string, content: any, senderId?: string) {
     const type: MessageType = senderId ? 'MEMBER' : 'SYSTEM';
 
     const messageData: Prisma.MessageCreateInput = {
@@ -63,105 +54,100 @@ export class ChatService implements OnModuleInit {
         throw error;
       }
 
-      return message.id;
+      return message;
     };
 
-    if (prismaTransaction) {
-      return execute(prismaTransaction);
-    } else {
-      return this.prismaService.$transaction(execute);
-    }
+    return this.prismaService.$transaction(execute);
   }
 
-  async createGroupChat(
-    memberIds: string[],
-    name?: string,
-    context?: string,
-  ): Promise<string> {
-    return this.prismaService.$transaction(async (prisma) => {
-      const chatData: Prisma.ChatCreateInput = {
-        members: {
-          create: memberIds.map((memberId) => ({
-            member: { connect: { id: memberId } },
-          })),
-        },
-      };
+  async createGroupChat(memberIds: string[], name?: string, context?: string) {
+    const chatData: Prisma.ChatCreateInput = {
+      members: {
+        create: memberIds.map((memberId) => ({
+          member: { connect: { id: memberId } },
+        })),
+      },
+    };
 
-      if (name !== undefined) {
-        chatData.name = name;
-      }
-      if (context !== undefined) {
-        chatData.context = context;
-      }
+    if (name) {
+      chatData.name = name;
+    }
 
-      const chat = await prisma.chat.create({
-        data: chatData,
-        include: {
-          members: true,
-        },
+    const chat = await this.prismaService.createChat(chatData);
+
+    await this.rabbitMQService.createOrAddMembersToGroupChat(
+      chat.id,
+      memberIds,
+    );
+
+    for (const memberId of memberIds) {
+      await this.rabbitMQService.sendServiceMessage(memberId, {
+        notification: 'NEW_CHAT',
+        chatId: chat.id,
       });
+    }
 
-      await this.rabbitMQService.createOrAddMembersToGroupChat(
-        chat.id,
-        memberIds,
-      );
+    console.log(`Chat ${chat.id} created.`);
 
-      for (const memberId of memberIds) {
-        await this.rabbitMQService.sendServiceMessage(memberId, {
-          notification: 'NEW_CHAT',
-          chatId: chat.id,
-        });
-      }
+    if (context) {
+      await this.setChatContext(chat.id, context);
+    }
 
-      console.log(`Chat ${chat.id} created.`);
-
-      if (context !== undefined) {
-        await this.sendMessage(
-          chat.id,
-          { text: context },
-          { prismaTransaction: prisma },
-        );
-      }
-
-      return chat.id;
-    });
+    return chat;
   }
 
   async addMemberToChat(
     chatId: string,
     memberId: string,
     chatInstructions?: string,
-  ): Promise<void> {
-    await this.prismaService.$transaction(async (prisma) => {
-      const chatMember = await prisma.chatMember.create({
-        data: {
-          chat: { connect: { id: chatId } },
-          member: { connect: { id: memberId } },
-          chatInstructions,
-        },
-        include: {
-          member: true,
-          chat: true,
-        },
-      });
+  ) {
+    const chatMember = await this.prismaService.createChatMember(
+      chatId,
+      memberId,
+      chatInstructions,
+    );
 
-      await this.rabbitMQService.createOrAddMembersToGroupChat(chatId, [
-        memberId,
-      ]);
+    await this.rabbitMQService.createOrAddMembersToGroupChat(chatId, [
+      memberId,
+    ]);
 
-      await this.rabbitMQService.createMemberServiceQueue(memberId);
+    await this.rabbitMQService.createMemberServiceQueue(memberId);
 
-      await this.rabbitMQService.sendServiceMessage(memberId, {
-        notification: 'NEW_CHAT',
-        chatId: chatId,
-      });
-
-      await this.sendMessage(
-        chatId,
-        { text: `${chatMember.member.name} has joined the chat.` },
-        { prismaTransaction: prisma },
-      );
+    await this.rabbitMQService.sendServiceMessage(memberId, {
+      notification: 'NEW_CHAT',
+      chatId: chatId,
     });
+
+    await this.sendMessage(chatId, {
+      text: `${chatMember.memberId} has joined the chat.`,
+    });
+
+    return chatMember;
+  }
+
+  async setChatContext(chatId: string, context: string) {
+    try {
+      const updatedChat = await this.prismaService.updateChat(chatId, {
+        context: context,
+      });
+      await this.sendMessage(chatId, context);
+      return updatedChat;
+    } catch (error) {
+      throw new Error(`Failed to set chat context: ${error.message}`);
+    }
+  }
+
+  async setChatConclusion(chatId: string, conclusion: string) {
+    try {
+      const updatedChat = await this.prismaService.updateChat(chatId, {
+        conclusion: conclusion,
+      });
+      const msg = { text: `Consensus reached: ${conclusion}.` };
+      await this.sendMessage(chatId, msg);
+      return updatedChat;
+    } catch (error) {
+      throw new Error(`Failed to set chat conclusion: ${error.message}`);
+    }
   }
 
   // Message broker methods

@@ -1,15 +1,10 @@
 // src/program/program.service.ts
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { setTimeout } from 'timers/promises';
 import { ChatService } from 'src/chat/chat.service';
 import { GptState } from './gpt/gpt.state';
 import { ClaudeState } from './claude/claude.state';
 import { GeminiState } from './gemini/gemini.state';
-import { setTimeout } from 'timers/promises';
-
-interface QueueItem {
-  memberId: string;
-  message: any;
-}
 
 @Injectable()
 export class ProgramService implements OnModuleInit {
@@ -17,7 +12,7 @@ export class ProgramService implements OnModuleInit {
   private programStates: Map<string, any> = new Map();
   private currentDelay: number = 0;
   private isPaused: boolean = false;
-  private waitingQueue: QueueItem[] = [];
+  private pendingMessages: Map<string, Map<string, any>> = new Map();
   private activeReplies: Map<string, Set<string>> = new Map();
 
   constructor(
@@ -46,7 +41,7 @@ export class ProgramService implements OnModuleInit {
     );
   }
 
-  async getAllProgramIds(): Promise<string[]> {
+  private async getAllProgramIds(): Promise<string[]> {
     const members = await this.chatService.getAllMembers();
     const memberIds = members
       .filter((member) => member.type === 'PROGRAM')
@@ -62,21 +57,6 @@ export class ProgramService implements OnModuleInit {
     return programState.reply.bind(programState);
   }
 
-  isReplying(memberId: string, chatId: string): boolean {
-    return this.activeReplies.get(memberId)?.has(chatId) || false;
-  }
-
-  private setReplying(memberId: string, chatId: string, value: boolean) {
-    if (!this.activeReplies.has(memberId)) {
-      this.activeReplies.set(memberId, new Set());
-    }
-    if (value) {
-      this.activeReplies.get(memberId)!.add(chatId);
-    } else {
-      this.activeReplies.get(memberId)!.delete(chatId);
-    }
-  }
-
   async handleMessage(memberId: string, message: any) {
     if (message.senderId === memberId) {
       return;
@@ -84,27 +64,26 @@ export class ProgramService implements OnModuleInit {
 
     const chatId = message.chatId;
 
-    if (this.isPaused) {
-      this.waitingQueue.push({ memberId, message });
-      console.log('handleMessage paused.');
-      return;
-    }
-
     if (this.isReplying(memberId, chatId)) {
       console.log(`${memberId} is already replying to chat ${chatId}.`);
       return;
     }
 
-    this.setReplying(memberId, chatId, true);
+    if (this.isPaused) {
+      this.setPending(memberId, message);
+      console.log('handleMessage paused');
+      return;
+    }
 
     try {
+      this.setReplying(memberId, chatId, true);
       this.applyDelay();
 
       const replyFunction = this.getReplyFunction(memberId);
       const reply = await replyFunction(chatId);
 
       if (reply) {
-        this.chatService.sendMessage(chatId, reply, { senderId: memberId });
+        this.chatService.sendMessage(chatId, reply, memberId);
       }
     } catch (error) {
       console.error('Failed to handle message:', error.message);
@@ -126,14 +105,37 @@ export class ProgramService implements OnModuleInit {
     }
   }
 
-  async applyDelay(): Promise<void> {
-    if (this.currentDelay > 0) {
-      await setTimeout(this.currentDelay);
+  isReplying(memberId: string, chatId: string): boolean {
+    return this.activeReplies.get(memberId)?.has(chatId) || false;
+  }
+
+  private setReplying(memberId: string, chatId: string, value: boolean) {
+    if (!this.activeReplies.has(memberId)) {
+      this.activeReplies.set(memberId, new Set());
     }
+    if (value) {
+      this.activeReplies.get(memberId)!.add(chatId);
+    } else {
+      this.activeReplies.get(memberId)!.delete(chatId);
+    }
+  }
+
+  private setPending(memberId: string, message: any) {
+    if (!this.pendingMessages.has(memberId)) {
+      this.pendingMessages.set(memberId, new Map());
+    }
+    const memberMessages = this.pendingMessages.get(memberId)!;
+    memberMessages.set(message.chatId, message);
   }
 
   setDelay(delay: number): void {
     this.currentDelay = delay;
+  }
+
+  async applyDelay(): Promise<void> {
+    if (this.currentDelay > 0) {
+      await setTimeout(this.currentDelay);
+    }
   }
 
   pause() {
@@ -147,11 +149,15 @@ export class ProgramService implements OnModuleInit {
       `Message handling resumed with delay of ${this.currentDelay} milliseconds.`,
     );
 
-    while (this.waitingQueue.length > 0) {
-      const item = this.waitingQueue.shift();
-      if (item) {
-        await this.handleMessage(item.memberId, item.message);
+    const processingPromises: Promise<void>[] = [];
+
+    for (const [memberId, chatMessages] of this.pendingMessages) {
+      for (const [, message] of chatMessages) {
+        processingPromises.push(this.handleMessage(memberId, message));
       }
     }
+
+    await Promise.all(processingPromises);
+    this.pendingMessages.clear();
   }
 }

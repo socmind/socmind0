@@ -2,7 +2,7 @@
 import { Controller, Get, Logger, Param } from '@nestjs/common';
 import { ChatService } from '../chat/chat.service';
 
-@Controller('api/users')
+@Controller('api/user')
 export class UserController {
   private readonly logger = new Logger(UserController.name);
 

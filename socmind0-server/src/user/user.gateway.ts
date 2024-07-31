@@ -56,11 +56,7 @@ export class UserGateway {
   }
 
   async sendMessage(chatId: string, content: string, userId: string) {
-    await this.chatService.sendMessage(
-      chatId,
-      { text: content },
-      { senderId: userId },
-    );
+    await this.chatService.sendMessage(chatId, { text: content }, userId);
   }
 
   sendMessageToUser(userId: string, message: any) {

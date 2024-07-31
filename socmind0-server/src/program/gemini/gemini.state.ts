@@ -1,4 +1,4 @@
-// src/agents/gemini/gemini.state.ts
+// src/program/gemini/gemini.state.ts
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from 'src/chat/chat.service';

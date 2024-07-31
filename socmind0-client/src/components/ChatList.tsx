@@ -31,7 +31,7 @@ export default function ChatList() {
 
     // Fetch initial list of chats
     console.log('Fetching chats...');
-    fetch('http://localhost:3001/api/users/flynn/chats')
+    fetch('http://localhost:3001/api/user/flynn/chats')
       .then((res) => {
         console.log('Fetch response:', res);
         return res.json();

@@ -35,13 +35,6 @@ export class PrismaService
     return messages;
   }
 
-  async getChatMembers(chatId: string) {
-    return await this.chatMember.findMany({
-      where: { chatId },
-      include: { member: true },
-    });
-  }
-
   async getMemberChats(memberId: string) {
     return await this.chat.findMany({
       where: {
@@ -54,14 +47,47 @@ export class PrismaService
     });
   }
 
+  async createChat(data: Prisma.ChatCreateInput) {
+    const chat = await this.chat.create({ data });
+    return chat;
+  }
+
+  async updateChat(id: string, data: Prisma.ChatUpdateInput) {
+    return await this.chat.update({ where: { id }, data });
+  }
+
+  // ChatMember methods
+  async getChatMembers(chatId: string) {
+    return await this.chatMember.findMany({
+      where: { chatId },
+      include: { member: true },
+    });
+  }
+
+  async createChatMember(
+    chatId: string,
+    memberId: string,
+    chatInstructions?: string,
+  ) {
+    const chatMember = await this.chatMember.create({
+      data: {
+        chat: { connect: { id: chatId } },
+        member: { connect: { id: memberId } },
+        chatInstructions,
+      },
+    });
+
+    return chatMember;
+  }
+
   // Member methods
   async getAllMembers() {
     return await this.member.findMany();
   }
 
-  async createMember(data: Prisma.MemberCreateInput): Promise<string> {
+  async createMember(data: Prisma.MemberCreateInput) {
     const member = await this.member.create({ data });
-    return member.id;
+    return member;
   }
 
   async getMember(id: string) {

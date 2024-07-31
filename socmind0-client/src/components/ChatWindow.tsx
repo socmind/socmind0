@@ -118,8 +118,8 @@ export default function ChatWindow() {
       <div className="p-4 bg-gray-200 flex justify-between items-center">
         <div>
           <button onClick={() => setDelay(0)} className={getButtonClass(0)}>Fast</button>
-          <button onClick={() => setDelay(3000)} className={getButtonClass(5000)}>Medium</button>
-          <button onClick={() => setDelay(5000)} className={getButtonClass(15000)}>Slow</button>
+          <button onClick={() => setDelay(5000)} className={getButtonClass(5000)}>Medium</button>
+          <button onClick={() => setDelay(15000)} className={getButtonClass(15000)}>Slow</button>
         </div>
         <button 
           onClick={togglePause} 

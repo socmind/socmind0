@@ -1,4 +1,4 @@
-// src/agents/claude/claude.state.ts
+// src/program/claude/claude.state.ts
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from 'src/chat/chat.service';
