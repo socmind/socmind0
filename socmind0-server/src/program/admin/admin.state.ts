@@ -8,8 +8,8 @@ import OpenAI from 'openai';
 export class AdminState {
   private readonly memberId = 'admin';
   private readonly openAi: OpenAI;
-  private readonly createChatPrompt = 'tbd';
-  private readonly conclusionPrompt = 'tbd';
+  private readonly createChatPrompt = 'create chat';
+  private readonly conclusionPrompt = 'conclusion';
 
   constructor(
     private readonly configService: ConfigService,
@@ -29,16 +29,29 @@ export class AdminState {
     const memberMetadata = await this.chatService.getMemberMetadata(
       this.memberId,
     );
+    const systemMessage = memberMetadata.systemMessage;
+    const chatMember = memberMetadata.chats.find(
+      (chat) => chat.chatId === chatId,
+    );
+    const chatInstructions = chatMember?.chatInstructions;
 
     const formattedMessages = messages.map((message) => ({
       role: this.determineMessageRole(message),
       content: (message.content as { text: string }).text ?? '',
     }));
 
-    if (memberMetadata.systemMessage) {
+    const combinedInstructions = [systemMessage, chatInstructions]
+      .filter(Boolean)
+      .join('\n');
+
+    console.log(
+      `Admin instructions for chat ${chatId}:\n\`\`\`\n${combinedInstructions}.\n\`\`\``,
+    );
+
+    if (combinedInstructions) {
       formattedMessages.unshift({
         role: 'system',
-        content: memberMetadata.systemMessage,
+        content: combinedInstructions,
       });
     }
 

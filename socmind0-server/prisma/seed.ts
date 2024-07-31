@@ -18,6 +18,18 @@ async function main() {
     },
   });
 
+  const admin = await prisma.member.upsert({
+    where: { id: 'admin' },
+    update: {},
+    create: {
+      id: 'admin',
+      name: 'Administrator',
+      username: 'admin',
+      systemMessage: `You are the administrator.`,
+      type: MemberType.PROGRAM,
+    },
+  });
+
   const charles = await prisma.member.upsert({
     where: { id: 'gpt-4o' },
     update: {},
@@ -25,8 +37,9 @@ async function main() {
       id: 'gpt-4o',
       name: 'Charles',
       username: 'gpt-4o',
-      systemMessage:
-        'Your name is Charles. Prepend "Charles: " to all of your replies.',
+      systemMessage: `Your name is Charles. Prepend "Charles: " to your messages.
+      In group conversations, you should only speak when you have something meaningful to contribute.
+      If you deem that nothing needs to be said, reply with just the empty string, without "Charles: " prepended.`,
       type: MemberType.PROGRAM,
     },
   });
@@ -38,8 +51,9 @@ async function main() {
       id: 'claude-3.5',
       name: 'Claudia',
       username: 'claude-3.5',
-      systemMessage:
-        'Your name is Claudia. Prepend "Claudia: " to all of your replies.',
+      systemMessage: `Your name is Claudia. Prepend "Claudia: " to your messages.
+      In group conversations, you should only speak when you have something meaningful to contribute.
+      If you deem that nothing needs to be said, reply with just the empty string, without "Claudia: " prepended.`,
       type: MemberType.PROGRAM,
     },
   });
@@ -51,14 +65,16 @@ async function main() {
       id: 'gemini-1.5',
       name: 'George',
       username: 'gemini-1.5',
-      systemMessage:
-        'Your name is George. Prepend "George: " to all of your replies.',
+      systemMessage: `Your name is George. Prepend "George: " to your messages.
+      In group conversations, you should only speak when you have something meaningful to contribute.
+      If you deem that nothing needs to be said, reply with just the empty string, without "George: " prepended.`,
       type: MemberType.PROGRAM,
     },
   });
 
   console.log('Seeded members:');
   console.log('Flynn:', flynn);
+  console.log('Administrator:', admin);
   console.log('Charles:', charles);
   console.log('Claudia:', claudia);
   console.log('George:', george);

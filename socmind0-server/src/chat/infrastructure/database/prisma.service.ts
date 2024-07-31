@@ -80,6 +80,24 @@ export class PrismaService
     return chatMember;
   }
 
+  async updateChatMember(
+    chatId: string,
+    memberId: string,
+    chatInstructions: string,
+  ) {
+    return await this.chatMember.update({
+      where: {
+        memberId_chatId: {
+          memberId: memberId,
+          chatId: chatId,
+        },
+      },
+      data: {
+        chatInstructions: chatInstructions,
+      },
+    });
+  }
+
   // Member methods
   async getAllMembers() {
     return await this.member.findMany();
@@ -91,7 +109,10 @@ export class PrismaService
   }
 
   async getMember(id: string) {
-    return await this.member.findUnique({ where: { id } });
+    return await this.member.findUnique({
+      where: { id },
+      include: { chats: true },
+    });
   }
 
   async updateMember(id: string, data: Prisma.MemberUpdateInput) {

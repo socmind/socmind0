@@ -27,16 +27,17 @@ export class GptState {
     const memberMetadata = await this.chatService.getMemberMetadata(
       this.memberId,
     );
+    const systemMessage = memberMetadata.systemMessage;
 
     const formattedMessages = messages.map((message) => ({
       role: this.determineMessageRole(message),
       content: (message.content as { text: string }).text ?? '',
     }));
 
-    if (memberMetadata.systemMessage) {
+    if (systemMessage) {
       formattedMessages.unshift({
         role: 'system',
-        content: memberMetadata.systemMessage,
+        content: systemMessage,
       });
     }
 
