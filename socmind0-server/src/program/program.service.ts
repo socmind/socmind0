@@ -2,6 +2,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { setTimeout } from 'timers/promises';
 import { ChatService } from 'src/chat/chat.service';
+import { ChatAdmin } from 'src/chat/chat.admin';
 import { GptState } from './gpt/gpt.state';
 import { ClaudeState } from './claude/claude.state';
 import { GeminiState } from './gemini/gemini.state';
@@ -10,13 +11,14 @@ import { GeminiState } from './gemini/gemini.state';
 export class ProgramService implements OnModuleInit {
   private memberIds: string[] = [];
   private programStates: Map<string, any> = new Map();
-  private currentDelay: number = 0;
+  private currentDelay: number = 15000;
   private isPaused: boolean = false;
   private pendingMessages: Map<string, Map<string, any>> = new Map();
   private activeReplies: Map<string, Set<string>> = new Map();
 
   constructor(
     private readonly chatService: ChatService,
+    private readonly chatAdmin: ChatAdmin,
     private readonly gptState: GptState,
     private readonly claudeState: ClaudeState,
     private readonly geminiState: GeminiState,
@@ -83,7 +85,7 @@ export class ProgramService implements OnModuleInit {
       const reply = await replyFunction(chatId);
 
       if (reply) {
-        this.chatService.sendMessage(chatId, reply, memberId);
+        this.chatAdmin.adminCheck(chatId, reply, memberId);
       }
     } catch (error) {
       console.error('Failed to handle message:', error.message);

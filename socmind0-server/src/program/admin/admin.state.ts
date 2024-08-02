@@ -4,6 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import { ChatService } from 'src/chat/chat.service';
 import OpenAI from 'openai';
 
+interface TaskDelegation {
+  name: string;
+  members: string[];
+  task: string;
+}
+
 @Injectable()
 export class AdminState {
   private readonly memberId = 'admin';
@@ -58,6 +64,59 @@ export class AdminState {
     return formattedMessages;
   }
 
+  checkTaskDelegationJson(message: string): [boolean, TaskDelegation | null] {
+    // Regular expression to find JSON-like structures in the message
+    const jsonPattern = /\{[^{}]*\}/g;
+
+    // Find all potential JSON objects in the message
+    const jsonCandidates = message.match(jsonPattern) || [];
+
+    for (const candidate of jsonCandidates) {
+      try {
+        // Try to parse the candidate as JSON
+        const taskObj = JSON.parse(candidate);
+
+        // Check if the parsed object has the required keys and correct types
+        if (
+          typeof taskObj.name === 'string' &&
+          Array.isArray(taskObj.members) &&
+          taskObj.members.every((member) => typeof member === 'string') &&
+          typeof taskObj.task === 'string'
+        ) {
+          return [true, taskObj as TaskDelegation];
+        }
+      } catch (error) {
+        // If parsing fails, move on to the next candidate
+        continue;
+      }
+    }
+
+    // If no valid task delegation JSON is found
+    return [false, null];
+  }
+
+  adminCheck(message: any) {
+    if (!message.senderId) {
+      return;
+    }
+
+    const senderId = message.senderId;
+    const chatId = message.chatId;
+
+    // if message.content has text field, run checkTaskDelegationJson on message.content.text
+
+    // if returns true, take the taskObj
+
+    const msg = `New task delegation proposed by ${senderId}:\n${taskObj}.
+    Waiting for approval from the committee.
+    To vote, reply 'APPROVE'. Make sure that you fully understand and agree with the proposal before approving.
+    If you have a different proposal in mind, simply reply with the new proposal, and a new round of voting will begin.`;
+
+    this.countVotes(chatId);
+
+    await this.chatService.sendMessage(chatId, { text: msg });
+  }
+
   async reply(chatId: string) {
     try {
       const formattedMessages = await this.getConversation(chatId);
@@ -82,7 +141,7 @@ export class AdminState {
           const memberIds = messageObject.messageIds;
           const name = messageObject.name;
           const context = messageObject.instruction;
-          const chat = await this.chatService.createGroupChat(
+          const chat = await this.chatService.createChat(
             memberIds,
             name,
             context,

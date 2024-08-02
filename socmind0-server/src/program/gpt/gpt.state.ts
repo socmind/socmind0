@@ -28,16 +28,24 @@ export class GptState {
       this.memberId,
     );
     const systemMessage = memberMetadata.systemMessage;
+    const chatMember = memberMetadata.chats.find(
+      (chat) => chat.chatId === chatId,
+    );
+    const chatInstructions = chatMember?.chatInstructions;
 
     const formattedMessages = messages.map((message) => ({
       role: this.determineMessageRole(message),
       content: (message.content as { text: string }).text ?? '',
     }));
 
-    if (systemMessage) {
+    const combinedInstructions = [systemMessage, chatInstructions]
+      .filter(Boolean)
+      .join('\n');
+
+    if (combinedInstructions) {
       formattedMessages.unshift({
         role: 'system',
-        content: systemMessage,
+        content: combinedInstructions,
       });
     }
 

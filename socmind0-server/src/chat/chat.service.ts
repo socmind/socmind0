@@ -1,22 +1,27 @@
 // src/chat/chat.service.ts
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { RabbitMQService } from 'src/chat/infrastructure/message-broker/rabbitmq.service';
-import { PrismaService } from 'src/chat/infrastructure/database/prisma.service';
 import { MessageType, Prisma } from '@prisma/client';
+import { PrismaService } from './infrastructure/database/prisma.service';
+import { RabbitMQService } from './infrastructure/message-broker/rabbitmq.service';
+import { ChatPrompts } from './chat.prompts';
 
 @Injectable()
 export class ChatService implements OnModuleInit {
+  private chatDirectory: Map<string, string[]> = new Map();
+
   constructor(
     private prismaService: PrismaService,
     private rabbitMQService: RabbitMQService,
+    private chatPrompts: ChatPrompts,
   ) {}
 
   async onModuleInit() {
     await this.createServiceQueues();
+    await this.initiateDirectory();
   }
 
   // Main methods
-  async sendMessage(chatId: string, content: any, senderId?: string) {
+  async publishMessage(chatId: string, content: any, senderId?: string) {
     const type: MessageType = senderId ? 'MEMBER' : 'SYSTEM';
 
     const messageData: Prisma.MessageCreateInput = {
@@ -60,7 +65,12 @@ export class ChatService implements OnModuleInit {
     return this.prismaService.$transaction(execute);
   }
 
-  async createGroupChat(memberIds: string[], name?: string, context?: string) {
+  async createChat(
+    memberIds: string[],
+    name?: string,
+    topic?: string,
+    context?: string,
+  ) {
     const chatData: Prisma.ChatCreateInput = {
       members: {
         create: memberIds.map((memberId) => ({
@@ -80,6 +90,8 @@ export class ChatService implements OnModuleInit {
       memberIds,
     );
 
+    await this.setFirstMessage(memberIds, chat.id, topic);
+
     for (const memberId of memberIds) {
       await this.rabbitMQService.sendServiceMessage(memberId, {
         notification: 'NEW_CHAT',
@@ -87,13 +99,57 @@ export class ChatService implements OnModuleInit {
       });
     }
 
-    console.log(`Chat ${chat.id} created.`);
-
     if (context) {
       await this.setChatContext(chat.id, context);
     }
 
+    console.log(`Chat ${chat.id} created with members: ${memberIds}.`);
+
     return chat;
+  }
+
+  async setFirstMessage(memberIds: string[], chatId: string, topic?: string) {
+    const members = await this.prismaService.member.findMany({
+      where: {
+        id: {
+          in: memberIds,
+        },
+      },
+    });
+
+    const memberInfo = members
+      .map((member) => `${member.name}: ${member.description}`)
+      .join('\n');
+
+    const directory = `Committee created with the following members:\n${memberInfo}\n`;
+
+    const guidelines = this.chatPrompts.getTaskDelegationPrompt();
+
+    if (topic) {
+      const topicMessage = `Here is the topic for the present discussion: ${topic}.\n`;
+      const conclusionPrompt = this.chatPrompts.getConclusionPrompt();
+      const firstMessage =
+        directory + topicMessage + conclusionPrompt + guidelines;
+
+      await this.publishMessage(chatId, { text: firstMessage });
+
+      console.log(`First message sent for chat ${chatId}: ${firstMessage}.`);
+      return firstMessage;
+    } else {
+      const firstMessage = directory + guidelines;
+      const messageData: Prisma.MessageCreateInput = {
+        chat: { connect: { id: chatId } },
+        content: { text: firstMessage },
+        type: 'SYSTEM',
+      };
+
+      await this.prismaService.createMessage(messageData);
+
+      console.log(
+        `First message added to database for chat ${chatId}: ${firstMessage}.`,
+      );
+      return firstMessage;
+    }
   }
 
   async addMemberToChat(
@@ -118,7 +174,7 @@ export class ChatService implements OnModuleInit {
       chatId: chatId,
     });
 
-    await this.sendMessage(chatId, {
+    await this.publishMessage(chatId, {
       text: `${chatMember.memberId} has joined the chat.`,
     });
 
@@ -130,7 +186,7 @@ export class ChatService implements OnModuleInit {
       const updatedChat = await this.prismaService.updateChat(chatId, {
         context: context,
       });
-      await this.sendMessage(chatId, context);
+      await this.publishMessage(chatId, context);
       return updatedChat;
     } catch (error) {
       throw new Error(`Failed to set chat context: ${error.message}`);
@@ -143,7 +199,7 @@ export class ChatService implements OnModuleInit {
         conclusion: conclusion,
       });
       const msg = { text: `Consensus reached: ${conclusion}.` };
-      await this.sendMessage(chatId, msg);
+      await this.publishMessage(chatId, msg);
       return updatedChat;
     } catch (error) {
       throw new Error(`Failed to set chat conclusion: ${error.message}`);
@@ -221,5 +277,31 @@ export class ChatService implements OnModuleInit {
   async getConversationHistory(chatId: string) {
     const conversation = await this.prismaService.getChatHistory(chatId);
     return conversation;
+  }
+
+  // In-memory methods
+  async initiateDirectory() {
+    const allChats = await this.prismaService.getAllChats();
+    allChats.forEach((chat) => {
+      const chatId = chat.id;
+      const memberIds = chat.members.map((member) => member.memberId);
+      this.chatDirectory.set(chatId, memberIds);
+    });
+  }
+
+  getChatDirectory() {
+    return this.chatDirectory;
+  }
+
+  updateDirectory(chatId: string, memberIds: string[]): void {
+    if (this.chatDirectory.has(chatId)) {
+      const existingMemberIds = this.chatDirectory.get(chatId)!;
+      const updatedMemberIds = Array.from(
+        new Set([...existingMemberIds, ...memberIds]),
+      );
+      this.chatDirectory.set(chatId, updatedMemberIds);
+    } else {
+      this.chatDirectory.set(chatId, [...new Set(memberIds)]);
+    }
   }
 }

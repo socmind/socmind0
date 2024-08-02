@@ -22,6 +22,12 @@ export class PrismaService
   }
 
   // Chat methods
+  async getAllChats() {
+    return await this.chat.findMany({
+      include: { members: true },
+    });
+  }
+
   async getChatHistory(chatId: string) {
     const messages = await this.message.findMany({
       where: {
@@ -54,6 +60,11 @@ export class PrismaService
 
   async updateChat(id: string, data: Prisma.ChatUpdateInput) {
     return await this.chat.update({ where: { id }, data });
+  }
+
+  async createMessage(data: Prisma.MessageCreateInput) {
+    const message = await this.message.create({ data });
+    return message;
   }
 
   // ChatMember methods

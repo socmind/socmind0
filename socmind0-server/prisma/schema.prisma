@@ -14,6 +14,7 @@ model Member {
   username      String       @unique
   email         String?      @unique
   systemMessage String?
+  description   String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   type          MemberType
@@ -30,6 +31,7 @@ model Chat {
   id         String       @id @default(uuid())
   name       String?
   context    String?
+  topic      String?
   conclusion String?
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
