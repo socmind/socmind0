@@ -69,6 +69,7 @@ export class ChatService implements OnModuleInit {
     memberIds: string[],
     name?: string,
     topic?: string,
+    creator?: string,
     context?: string,
   ) {
     const chatData: Prisma.ChatCreateInput = {
@@ -81,6 +82,10 @@ export class ChatService implements OnModuleInit {
 
     if (name) {
       chatData.name = name;
+    }
+
+    if (creator) {
+      chatData.creator = creator;
     }
 
     const chat = await this.prismaService.createChat(chatData);
@@ -102,6 +107,8 @@ export class ChatService implements OnModuleInit {
     if (context) {
       await this.setChatContext(chat.id, context);
     }
+
+    this.updateDirectory(chat.id, memberIds);
 
     console.log(`Chat ${chat.id} created with members: ${memberIds}.`);
 
@@ -175,8 +182,10 @@ export class ChatService implements OnModuleInit {
     });
 
     await this.publishMessage(chatId, {
-      text: `${chatMember.memberId} has joined the chat.`,
+      text: `${memberId} has joined the chat.`,
     });
+
+    this.updateDirectory(chatId, [memberId]);
 
     return chatMember;
   }
@@ -200,6 +209,15 @@ export class ChatService implements OnModuleInit {
       });
       const msg = { text: `Consensus reached: ${conclusion}.` };
       await this.publishMessage(chatId, msg);
+
+      const chat = await this.prismaService.getChat(chatId);
+      if (chat.creator) {
+        const report = `Message from group '${chat.name}':\n
+        A conclusion has been reached regarding the task '${chat.topic}'.
+        Here is the conclusion: '${conclusion}'.`;
+        await this.publishMessage(chat.creator, { text: report });
+      }
+
       return updatedChat;
     } catch (error) {
       throw new Error(`Failed to set chat conclusion: ${error.message}`);

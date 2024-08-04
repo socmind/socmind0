@@ -31,6 +31,7 @@ model Chat {
   id         String       @id @default(uuid())
   name       String?
   context    String?
+  creator    String?
   topic      String?
   conclusion String?
   createdAt  DateTime     @default(now())

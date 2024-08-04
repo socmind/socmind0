@@ -117,14 +117,18 @@ export class ChatAdmin {
     const command = this.commandObjects.get(chatId);
 
     if (this.isTaskDelegation(command)) {
-      await this.chatService.createChat(
+      const chat = await this.chatService.createChat(
         command.members,
         command.name,
         command.task,
+        chatId,
       );
+      const msg = `Group "${chat.name}" has been created. We will hear back from the group once a conclusion has been reached, or when additional information is requested.`;
+      await this.chatService.publishMessage(chatId, { text: msg });
     }
 
     if (this.isConclusion(command)) {
+      await this.chatService.setChatConclusion(chatId, command.conclusion);
     }
 
     this.votes.set(chatId, []);
@@ -145,14 +149,13 @@ export class ChatAdmin {
     const [isValidTaskDelegation, taskObj] = this.checkTaskDelegationJson(
       content.text,
     );
-
     if (isValidTaskDelegation && taskObj) {
-      const taskDetails = JSON.stringify(taskObj, null, 2);
+      const delegation = JSON.stringify(taskObj, null, 2);
 
-      const msg = `New task delegation proposed by ${senderId}:\n${taskDetails}\n
+      const msg = `New task delegation proposed by ${senderId}:\n${delegation}\n
         Waiting for approval from the committee.
         To vote, reply 'APPROVE'. Make sure that you fully understand and agree with the proposal before approving.
-        If you have a different proposal in mind, reply with the new proposal, and a new round of voting will begin.
+        If you have a different proposal in mind, reply with the new proposal, and a new round of voting will commence.
         You can also abstain from either approving or suggesting an alternative proposal, and simply voice your opinions, or remain silent.`;
 
       this.commandObjects.set(chatId, taskObj);
@@ -172,14 +175,13 @@ export class ChatAdmin {
     const [isValidConclusion, conclusionObj] = this.checkConclusionJson(
       content.text,
     );
-
     if (isValidConclusion && conclusionObj) {
       const conclusion = JSON.stringify(conclusionObj, null, 2);
 
       const msg = `Conclusion proposed by ${senderId}:\n${conclusion}\n
           Waiting for approval from the committee.
           To vote, reply 'APPROVE'. Make sure that you fully understand and agree with the conclusion before approving.
-          If you disapprove of this conclusion, voice your concerns. You may also propose a new conclusion.`;
+          If you disapprove of this conclusion, voice your concerns. You may also propose a new conclusion, upon which a new round of voting will commence.`;
 
       this.commandObjects.set(chatId, conclusionObj);
       this.votes.set(chatId, [senderId]);

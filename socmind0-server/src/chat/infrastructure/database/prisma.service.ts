@@ -28,6 +28,12 @@ export class PrismaService
     });
   }
 
+  async getChat(id: string) {
+    return await this.chat.findUnique({
+      where: { id },
+    });
+  }
+
   async getChatHistory(chatId: string) {
     const messages = await this.message.findMany({
       where: {

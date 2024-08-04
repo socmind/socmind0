@@ -5,6 +5,7 @@ import {
   SubscribeMessage,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { ChatAdmin } from 'src/chat/chat.admin';
 import { ChatService } from 'src/chat/chat.service';
 
 @WebSocketGateway({
@@ -19,7 +20,10 @@ export class UserGateway {
   server: Server;
 
   private userSockets: Map<string, Socket> = new Map();
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly chatAdmin: ChatAdmin,
+  ) {}
 
   handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;
@@ -56,7 +60,7 @@ export class UserGateway {
   }
 
   async sendMessage(chatId: string, content: string, userId: string) {
-    await this.chatService.sendMessage(chatId, { text: content }, userId);
+    await this.chatAdmin.adminCheck(chatId, { text: content }, userId);
   }
 
   sendMessageToUser(userId: string, message: any) {

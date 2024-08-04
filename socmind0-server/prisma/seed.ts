@@ -18,18 +18,6 @@ async function main() {
     },
   });
 
-  const admin = await prisma.member.upsert({
-    where: { id: 'admin' },
-    update: {},
-    create: {
-      id: 'admin',
-      name: 'Administrator',
-      username: 'admin',
-      systemMessage: `You are the administrator.`,
-      type: MemberType.PROGRAM,
-    },
-  });
-
   const charles = await prisma.member.upsert({
     where: { id: 'gpt-4o' },
     update: {},
@@ -74,7 +62,6 @@ async function main() {
 
   console.log('Seeded members:');
   console.log('Flynn:', flynn);
-  console.log('Administrator:', admin);
   console.log('Charles:', charles);
   console.log('Claudia:', claudia);
   console.log('George:', george);
@@ -83,7 +70,6 @@ async function main() {
   const chat1 = await prisma.chat.create({
     data: {
       name: 'First Chat',
-      context: 'Hello all.',
       members: {
         create: [
           { memberId: flynn.id },
@@ -95,7 +81,9 @@ async function main() {
       messages: {
         create: [
           {
-            content: { text: 'Please introduce yourselves.' },
+            content: {
+              text: `Welcome to the Society of Mind.`,
+            },
             type: MessageType.SYSTEM,
           },
         ],
