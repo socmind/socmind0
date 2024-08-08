@@ -6,6 +6,7 @@ import { ChatAdmin } from 'src/chat/chat.admin';
 import { GptState } from './gpt/gpt.state';
 import { ClaudeState } from './claude/claude.state';
 import { GeminiState } from './gemini/gemini.state';
+import { LastInWinsMutex } from './program.mutex';
 
 @Injectable()
 export class ProgramService implements OnModuleInit {
@@ -14,7 +15,7 @@ export class ProgramService implements OnModuleInit {
   private currentDelay: number = 15000;
   private isPaused: boolean = false;
   private pendingMessages: Map<string, Map<string, any>> = new Map();
-  private activeReplies: Map<string, Set<string>> = new Map();
+  private memberChatLocks: Map<string, LastInWinsMutex> = new Map();
 
   constructor(
     private readonly chatService: ChatService,
@@ -43,22 +44,6 @@ export class ProgramService implements OnModuleInit {
     );
   }
 
-  private async getAllProgramIds(): Promise<string[]> {
-    const members = await this.chatService.getAllMembers();
-    const memberIds = members
-      .filter((member) => member.type === 'PROGRAM')
-      .map((member) => member.id);
-    return memberIds;
-  }
-
-  private getReplyFunction(memberId: string): (chatId: string) => Promise<any> {
-    const programState = this.programStates.get(memberId);
-    if (!programState) {
-      throw new Error(`Unknown program ID: ${memberId}`);
-    }
-    return programState.reply.bind(programState);
-  }
-
   async handleMessage(memberId: string, message: any) {
     if (message.senderId === memberId) {
       return;
@@ -66,31 +51,37 @@ export class ProgramService implements OnModuleInit {
 
     const chatId = message.chatId;
 
-    if (this.isReplying(memberId, chatId)) {
-      console.log(`${memberId} is already replying to chat ${chatId}.`);
-      return;
+    const memberChatKey = this.getMemberChatKey(memberId, chatId);
+
+    let memberChatLock = this.memberChatLocks.get(memberChatKey);
+    if (!memberChatLock) {
+      memberChatLock = new LastInWinsMutex();
+      this.memberChatLocks.set(memberChatKey, memberChatLock);
     }
 
-    if (this.isPaused) {
-      this.setPending(memberId, message);
-      console.log('handleMessage paused');
-      return;
-    }
+    const release = await memberChatLock.acquire();
 
     try {
-      this.setReplying(memberId, chatId, true);
-      this.applyDelay();
+      if (this.isPaused) {
+        this.setPending(memberId, message);
+        console.log('handleMessage paused');
+        return;
+      }
+
+      await this.applyDelay();
 
       const replyFunction = this.getReplyFunction(memberId);
       const reply = await replyFunction(chatId);
 
       if (reply) {
-        this.chatAdmin.adminCheck(chatId, reply, memberId);
+        await this.chatAdmin.sendMessage(chatId, reply, memberId);
+      } else {
+        console.log(`${memberId} chose not to reply to chat ${chatId}.`);
       }
     } catch (error) {
       console.error('Failed to handle message:', error.message);
     } finally {
-      this.setReplying(memberId, chatId, false);
+      release();
     }
   }
 
@@ -107,19 +98,24 @@ export class ProgramService implements OnModuleInit {
     }
   }
 
-  isReplying(memberId: string, chatId: string): boolean {
-    return this.activeReplies.get(memberId)?.has(chatId) || false;
+  private async getAllProgramIds(): Promise<string[]> {
+    const members = await this.chatService.getAllMembers();
+    const memberIds = members
+      .filter((member) => member.type === 'PROGRAM')
+      .map((member) => member.id);
+    return memberIds;
   }
 
-  private setReplying(memberId: string, chatId: string, value: boolean) {
-    if (!this.activeReplies.has(memberId)) {
-      this.activeReplies.set(memberId, new Set());
+  private getReplyFunction(memberId: string): (chatId: string) => Promise<any> {
+    const programState = this.programStates.get(memberId);
+    if (!programState) {
+      throw new Error(`Unknown program ID: ${memberId}`);
     }
-    if (value) {
-      this.activeReplies.get(memberId)!.add(chatId);
-    } else {
-      this.activeReplies.get(memberId)!.delete(chatId);
-    }
+    return programState.reply.bind(programState);
+  }
+
+  private getMemberChatKey(memberId: string, chatId: string): string {
+    return `${memberId}:${chatId}`;
   }
 
   private setPending(memberId: string, message: any) {

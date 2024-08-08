@@ -32,6 +32,7 @@
     "@nestjs/websockets": "^10.3.10",
     "@prisma/client": "^5.16.1",
     "amqplib": "^0.10.4",
+    "async-mutex": "^0.5.0",
     "openai": "^4.51.0",
     "prisma": "^5.16.1",
     "reflect-metadata": "^0.2.0",

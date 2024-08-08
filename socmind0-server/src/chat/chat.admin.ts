@@ -135,7 +135,7 @@ export class ChatAdmin {
     this.commandObjects.set(chatId, undefined);
   }
 
-  async adminCheck(chatId: string, content: any, senderId?: string) {
+  async sendMessage(chatId: string, content: any, senderId?: string) {
     if (!senderId) {
       await this.chatService.publishMessage(chatId, content);
       return;
