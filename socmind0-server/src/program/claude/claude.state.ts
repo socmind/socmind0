@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from 'src/chat/chat.service';
 import Anthropic from '@anthropic-ai/sdk';
+import { AppGateway } from 'src/app.gateway';
 
 @Injectable()
 export class ClaudeState {
@@ -12,6 +13,7 @@ export class ClaudeState {
   constructor(
     private readonly configService: ConfigService,
     private readonly chatService: ChatService,
+    private readonly appGateway: AppGateway,
   ) {
     const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
     this.anthropic = new Anthropic({ apiKey });
@@ -63,6 +65,8 @@ export class ClaudeState {
 
   async reply(chatId: string) {
     try {
+      this.appGateway.sendTypingIndicator(chatId, this.memberId, true);
+
       const formattedMessages = await this.getConversation(chatId);
       const systemMessage = await this.getSystemMessage();
 
@@ -106,6 +110,8 @@ export class ClaudeState {
     } catch (error) {
       console.error('Error calling Anthropic:', error);
       throw new Error('Failed to get response from Claude.');
+    } finally {
+      this.appGateway.sendTypingIndicator(chatId, this.memberId, false);
     }
   }
 }

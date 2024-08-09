@@ -1,7 +1,7 @@
 // src/user/user.service.ts
 import { Injectable } from '@nestjs/common';
 import { ChatService } from 'src/chat/chat.service';
-import { UserGateway } from './user.gateway';
+import { AppGateway } from 'src/app.gateway';
 
 @Injectable()
 export class UserService {
@@ -9,7 +9,7 @@ export class UserService {
 
   constructor(
     private readonly chatService: ChatService,
-    private readonly userGateway: UserGateway,
+    private readonly appGateway: AppGateway,
   ) {}
 
   async onModuleInit() {
@@ -30,7 +30,7 @@ export class UserService {
     }
 
     // Emit the received message to the connected client
-    this.userGateway.sendMessageToUser(this.memberId, message);
+    this.appGateway.sendMessageToUser(this.memberId, message);
   }
 
   async handleServiceMessage(message: any) {
@@ -41,7 +41,7 @@ export class UserService {
         this.handleMessage.bind(this),
       );
 
-      this.userGateway.notifyNewChat(this.memberId, message.chatId);
+      this.appGateway.notifyNewChat(this.memberId, message.chatId);
 
       console.log(
         `Queue to chat ${message.chatId} initialized for member ${this.memberId}.`,

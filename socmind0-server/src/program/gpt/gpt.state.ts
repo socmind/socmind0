@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from 'src/chat/chat.service';
 import OpenAI from 'openai';
+import { AppGateway } from 'src/app.gateway';
 
 @Injectable()
 export class GptState {
@@ -12,6 +13,7 @@ export class GptState {
   constructor(
     private readonly configService: ConfigService,
     private readonly chatService: ChatService,
+    private readonly appGateway: AppGateway,
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     this.openAi = new OpenAI({ apiKey });
@@ -54,6 +56,8 @@ export class GptState {
 
   async reply(chatId: string) {
     try {
+      this.appGateway.sendTypingIndicator(chatId, this.memberId, true);
+
       const formattedMessages = await this.getConversation(chatId);
 
       if (
@@ -82,6 +86,8 @@ export class GptState {
     } catch (error) {
       console.error('Error calling OpenAI:', error);
       throw new Error('Failed to get response from OpenAI.');
+    } finally {
+      this.appGateway.sendTypingIndicator(chatId, this.memberId, false);
     }
   }
 }

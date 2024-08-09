@@ -6,6 +6,7 @@ import { RabbitMQModule } from './chat/infrastructure/message-broker/rabbitmq.mo
 import { ChatModule } from './chat/chat.module';
 import { UserModule } from './user/user.module';
 import { ProgramModule } from './program/program.module';
+import { AppGateway } from './app.gateway';
 
 @Module({
   imports: [
@@ -18,5 +19,6 @@ import { ProgramModule } from './program/program.module';
     UserModule,
     ProgramModule,
   ],
+  providers: [AppGateway],
 })
 export class AppModule {}

@@ -1,4 +1,4 @@
-// src/user/user.gateway.ts
+// src/app.gateway.ts
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -15,7 +15,7 @@ import { ChatService } from 'src/chat/chat.service';
     credentials: true,
   },
 })
-export class UserGateway {
+export class AppGateway {
   @WebSocketServer()
   server: Server;
 
@@ -56,11 +56,11 @@ export class UserGateway {
     payload: { chatId: string; content: string },
   ) {
     const userId = client.handshake.query.userId as string;
-    await this.sendMessage(payload.chatId, payload.content, userId);
-  }
-
-  async sendMessage(chatId: string, content: string, userId: string) {
-    await this.chatAdmin.sendMessage(chatId, { text: content }, userId);
+    await this.chatAdmin.sendMessage(
+      payload.chatId,
+      { text: payload.content },
+      userId,
+    );
   }
 
   sendMessageToUser(userId: string, message: any) {
@@ -81,5 +81,9 @@ export class UserGateway {
     if (userSocket) {
       userSocket.emit('newChat', { chatId });
     }
+  }
+
+  sendTypingIndicator(chatId: string, memberId: string, isTyping: boolean) {
+    this.server.to(chatId).emit('typingIndicator', { memberId, isTyping });
   }
 }

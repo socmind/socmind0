@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from 'src/chat/chat.service';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AppGateway } from 'src/app.gateway';
 
 @Injectable()
 export class GeminiState {
@@ -12,6 +13,7 @@ export class GeminiState {
   constructor(
     private readonly configService: ConfigService,
     private readonly chatService: ChatService,
+    private readonly appGateway: AppGateway,
   ) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     this.googleAi = new GoogleGenerativeAI(apiKey);
@@ -39,6 +41,8 @@ export class GeminiState {
 
   async reply(chatId: string) {
     try {
+      this.appGateway.sendTypingIndicator(chatId, this.memberId, true);
+
       const formattedMessages = await this.getConversation(chatId);
       const systemMessage = await this.getSystemMessage();
 
@@ -76,6 +80,8 @@ export class GeminiState {
     } catch (error) {
       console.error('Error calling Gemini:', error);
       throw new Error('Failed to get response from Google.');
+    } finally {
+      this.appGateway.sendTypingIndicator(chatId, this.memberId, false);
     }
   }
 }
