@@ -3,6 +3,8 @@ import {
   WebSocketGateway,
   WebSocketServer,
   SubscribeMessage,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatAdmin } from 'src/chat/chat.admin';
@@ -15,24 +17,22 @@ import { ChatService } from 'src/chat/chat.service';
     credentials: true,
   },
 })
-export class AppGateway {
+export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
+  private readonly userId = 'flynn';
 
-  private userSockets: Map<string, Socket> = new Map();
   constructor(
     private readonly chatService: ChatService,
     private readonly chatAdmin: ChatAdmin,
   ) {}
 
   handleConnection(client: Socket) {
-    const userId = client.handshake.query.userId as string;
-    this.userSockets.set(userId, client);
+    console.log(`Client connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket) {
-    const userId = client.handshake.query.userId as string;
-    this.userSockets.delete(userId);
+    console.log(`Client disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('joinChat')
@@ -55,35 +55,29 @@ export class AppGateway {
     client: Socket,
     payload: { chatId: string; content: string },
   ) {
-    const userId = client.handshake.query.userId as string;
+    console.log(`Sending user message to chatAdmin.`);
     await this.chatAdmin.sendMessage(
       payload.chatId,
       { text: payload.content },
-      userId,
+      this.userId,
     );
   }
 
-  sendMessageToUser(userId: string, message: any) {
+  sendMessageToUser(message: any) {
     const formattedMessage = {
       content: message.content,
       messageType: message.type,
       chatId: message.chatId,
       senderId: message.senderId || undefined,
     };
-    const userSocket = this.userSockets.get(userId);
-    if (userSocket) {
-      userSocket.emit('newMessage', formattedMessage);
-    }
+    this.server.emit('newMessage', formattedMessage);
   }
 
-  notifyNewChat(userId: string, chatId: string) {
-    const userSocket = this.userSockets.get(userId);
-    if (userSocket) {
-      userSocket.emit('newChat', { chatId });
-    }
+  notifyNewChat(chatId: string) {
+    this.server.emit('newChat', { chatId });
   }
 
   sendTypingIndicator(chatId: string, memberId: string, isTyping: boolean) {
-    this.server.to(chatId).emit('typingIndicator', { memberId, isTyping });
+    this.server.emit('typingIndicator', { chatId, memberId, isTyping });
   }
 }

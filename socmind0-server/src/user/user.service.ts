@@ -30,7 +30,7 @@ export class UserService {
     }
 
     // Emit the received message to the connected client
-    this.appGateway.sendMessageToUser(this.memberId, message);
+    this.appGateway.sendMessageToUser(message);
   }
 
   async handleServiceMessage(message: any) {
@@ -41,7 +41,7 @@ export class UserService {
         this.handleMessage.bind(this),
       );
 
-      this.appGateway.notifyNewChat(this.memberId, message.chatId);
+      this.appGateway.notifyNewChat(message.chatId);
 
       console.log(
         `Queue to chat ${message.chatId} initialized for member ${this.memberId}.`,
