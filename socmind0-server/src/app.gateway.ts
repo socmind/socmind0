@@ -1,4 +1,5 @@
 // src/app.gateway.ts
+import { Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -20,19 +21,29 @@ import { ChatService } from 'src/chat/chat.service';
 export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
+  private userSocket: Socket | null = null;
   private readonly userId = 'flynn';
+  private readonly logger = new Logger(AppGateway.name);
 
   constructor(
     private readonly chatService: ChatService,
     private readonly chatAdmin: ChatAdmin,
   ) {}
 
-  handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+  async handleConnection(client: Socket) {
+    this.logger.log(`Client connected: ${client.id}`);
+    this.userSocket = client;
+    await this.sendUserChats();
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+    this.logger.log(`Client disconnected: ${client.id}`);
+    this.userSocket = null;
+  }
+
+  @SubscribeMessage('getUserChats')
+  async handleGetUserChats() {
+    await this.sendUserChats();
   }
 
   @SubscribeMessage('joinChat')
@@ -55,12 +66,33 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     payload: { chatId: string; content: string },
   ) {
-    console.log(`Sending user message to chatAdmin.`);
+    this.logger.log(`Sending user message to chatAdmin.`);
     await this.chatAdmin.sendMessage(
       payload.chatId,
       { text: payload.content },
       this.userId,
     );
+  }
+
+  private async sendUserChats() {
+    if (!this.userSocket) {
+      this.logger.warn('Attempted to send chats, but no user is connected');
+      return;
+    }
+
+    try {
+      const chats = await this.chatService.getMemberChats(this.userId);
+      this.userSocket.emit('userChats', chats);
+    } catch (error) {
+      this.logger.error(`Error fetching user chats: ${error.message}`);
+      this.userSocket.emit('error', { message: 'Failed to fetch user chats' });
+    }
+  }
+
+  notifyNewChat(chatId: string) {
+    this.logger.log(`New chat created: ${chatId}`);
+    this.userSocket.emit('newChat', { chatId });
+    this.sendUserChats();
   }
 
   sendMessageToUser(message: any) {
@@ -70,14 +102,10 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       chatId: message.chatId,
       senderId: message.senderId || undefined,
     };
-    this.server.emit('newMessage', formattedMessage);
-  }
-
-  notifyNewChat(chatId: string) {
-    this.server.emit('newChat', { chatId });
+    this.userSocket.emit('newMessage', formattedMessage);
   }
 
   sendTypingIndicator(chatId: string, memberId: string, isTyping: boolean) {
-    this.server.emit('typingIndicator', { chatId, memberId, isTyping });
+    this.userSocket.emit('typingIndicator', { chatId, memberId, isTyping });
   }
 }

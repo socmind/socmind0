@@ -14,13 +14,13 @@ export class ChatPrompts implements OnModuleInit {
 
   getTaskDelegationPrompt() {
     const memberInfo = this.allMembers
-      .map((member) => `${member.name}: ${member.description}`)
+      .map((member) => `${member.id}: ${member.description}`)
       .join('\n');
 
     const taskDelegationPrompt = `The following is a list of all members in the society:\n${memberInfo}\n
     If deemed necessary, the committee may delegate tasks to any member or group of members in the society, should their expertise be found useful in supporting and advancing the present discussion.
     To do so, simply provide a JSON object containing an array of the names of the desired group member(s), the task or request for the group to complete, and an appropriate name for the group.
-    Here is some examples:
+    Here are some examples:
     \`\`\`json
     {
         "name": "Fourier Transform Implementation",

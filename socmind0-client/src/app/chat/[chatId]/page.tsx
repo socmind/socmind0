@@ -1,17 +1,11 @@
 // src/app/chat/[chatId]/page.tsx
-import { Suspense } from 'react';
-import ChatList from '../../../components/ChatList';
-import ChatWindow from '../../../components/ChatWindow';
+import { ChatInterface } from "../../../components/ChatInterface";
 
-export default function ChatPage() {
+export default function ChatPage({ params }: { params: { chatId: string } }) {
   return (
-    <div className="flex h-screen">
-      <Suspense fallback={<div>Loading chats...</div>}>
-        <ChatList />
-      </Suspense>
-      <Suspense fallback={<div>Loading chat...</div>}>
-        <ChatWindow />
-      </Suspense>
+    <div>
+      <h1>Chat: {params.chatId}</h1>
+      <ChatInterface chatId={params.chatId} />
     </div>
   );
 }
