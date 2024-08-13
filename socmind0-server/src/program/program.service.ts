@@ -1,5 +1,6 @@
 // src/program/program.service.ts
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Message } from '@prisma/client';
 import { setTimeout } from 'timers/promises';
 import { ChatService } from 'src/chat/chat.service';
 import { ChatAdmin } from 'src/chat/chat.admin';
@@ -34,8 +35,9 @@ export class ProgramService implements OnModuleInit {
 
     await Promise.all(
       this.memberIds.flatMap((memberId) => [
-        this.chatService.initAllQueuesConsumption(memberId, (message: any) =>
-          this.handleMessage(memberId, message),
+        this.chatService.initAllQueuesConsumption(
+          memberId,
+          (message: Message) => this.handleMessage(memberId, message),
         ),
         this.chatService.initServiceQueueConsumption(memberId, (message: any) =>
           this.handleServiceMessage(memberId, message),
@@ -44,7 +46,7 @@ export class ProgramService implements OnModuleInit {
     );
   }
 
-  async handleMessage(memberId: string, message: any) {
+  async handleMessage(memberId: string, message: Message) {
     if (message.senderId === memberId) {
       return;
     }
@@ -90,7 +92,7 @@ export class ProgramService implements OnModuleInit {
       await this.chatService.initQueueConsumption(
         memberId,
         message.chatId,
-        (message: any) => this.handleMessage(memberId, message),
+        (message: Message) => this.handleMessage(memberId, message),
       );
       console.log(
         `Queue to chat ${message.chatId} initialized for member ${memberId}.`,

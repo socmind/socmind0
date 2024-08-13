@@ -2,13 +2,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ChatModule } from 'src/chat/chat.module';
+import { GatewayModule } from 'src/gateway/gateway.module';
 import { ProgramService } from './program.service';
 import { ProgramController } from './program.controller';
 import { LastInWinsMutex } from './program.mutex';
 import { GptState } from './gpt/gpt.state';
 import { ClaudeState } from './claude/claude.state';
 import { GeminiState } from './gemini/gemini.state';
-import { AppGateway } from 'src/app.gateway';
 
 @Module({
   imports: [
@@ -16,6 +16,7 @@ import { AppGateway } from 'src/app.gateway';
       isGlobal: true,
     }),
     ChatModule,
+    GatewayModule,
   ],
   providers: [
     ProgramService,
@@ -23,7 +24,6 @@ import { AppGateway } from 'src/app.gateway';
     GptState,
     ClaudeState,
     GeminiState,
-    AppGateway,
   ],
   controllers: [ProgramController],
 })

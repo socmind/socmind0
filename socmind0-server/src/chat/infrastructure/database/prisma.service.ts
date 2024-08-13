@@ -1,6 +1,6 @@
 // src/infrastructure/database/prisma.service.ts
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, Message } from '@prisma/client';
 
 @Injectable()
 export class PrismaService
@@ -34,7 +34,7 @@ export class PrismaService
     });
   }
 
-  async getChatHistory(chatId: string) {
+  async getChatHistory(chatId: string): Promise<Message[]> {
     const messages = await this.message.findMany({
       where: {
         chatId: chatId,

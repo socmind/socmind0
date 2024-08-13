@@ -1,6 +1,6 @@
 // src/chat/chat.service.ts
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { MessageType, Prisma } from '@prisma/client';
+import { MessageType, Prisma, Message } from '@prisma/client';
 import { PrismaService } from './infrastructure/database/prisma.service';
 import { RabbitMQService } from './infrastructure/message-broker/rabbitmq.service';
 import { ChatPrompts } from './chat.prompts';
@@ -21,7 +21,11 @@ export class ChatService implements OnModuleInit {
   }
 
   // Main methods
-  async publishMessage(chatId: string, content: any, senderId?: string) {
+  async publishMessage(
+    chatId: string,
+    content: any,
+    senderId?: string,
+  ): Promise<Message> {
     const type: MessageType = senderId ? 'MEMBER' : 'SYSTEM';
 
     const messageData: Prisma.MessageCreateInput = {
@@ -40,20 +44,13 @@ export class ChatService implements OnModuleInit {
       messageData.sender = { connect: { id: senderId } };
     }
 
-    const rabbitMQMessage = {
-      content,
-      type,
-      chatId,
-      ...(senderId && { senderId }),
-    };
-
     const execute = async (prisma: Prisma.TransactionClient) => {
       const message = await prisma.message.create({
         data: messageData,
       });
 
       try {
-        await this.rabbitMQService.sendMessage(rabbitMQMessage);
+        await this.rabbitMQService.sendMessage(message);
       } catch (error) {
         console.error('Failed to send message to RabbitMQ:', error);
         throw error;
@@ -115,7 +112,11 @@ export class ChatService implements OnModuleInit {
     return chat;
   }
 
-  async setFirstMessage(memberIds: string[], chatId: string, topic?: string) {
+  async setFirstMessage(
+    memberIds: string[],
+    chatId: string,
+    topic?: string,
+  ): Promise<Message> {
     const members = await this.prismaService.member.findMany({
       where: {
         id: {
@@ -138,10 +139,10 @@ export class ChatService implements OnModuleInit {
       const firstMessage =
         directory + topicMessage + conclusionPrompt + guidelines;
 
-      await this.publishMessage(chatId, { text: firstMessage });
+      const msg = await this.publishMessage(chatId, { text: firstMessage });
 
       console.log(`First message sent for chat ${chatId}: ${firstMessage}.`);
-      return firstMessage;
+      return msg;
     } else {
       const firstMessage = directory + guidelines;
       const messageData: Prisma.MessageCreateInput = {
@@ -150,12 +151,12 @@ export class ChatService implements OnModuleInit {
         type: 'SYSTEM',
       };
 
-      await this.prismaService.createMessage(messageData);
+      const msg = await this.prismaService.createMessage(messageData);
 
       console.log(
         `First message added to database for chat ${chatId}: ${firstMessage}.`,
       );
-      return firstMessage;
+      return msg;
     }
   }
 
@@ -252,7 +253,7 @@ export class ChatService implements OnModuleInit {
   async initQueueConsumption(
     memberId: string,
     chatId: string,
-    messageHandler: (message: any) => void,
+    messageHandler: (message: Message) => void,
   ) {
     await this.rabbitMQService.consumeMessages(
       memberId,
@@ -263,7 +264,7 @@ export class ChatService implements OnModuleInit {
 
   async initAllQueuesConsumption(
     memberId: string,
-    messageHandler: (message: any) => void,
+    messageHandler: (message: Message) => void,
   ) {
     const chats = await this.getMemberChats(memberId);
 
@@ -292,7 +293,12 @@ export class ChatService implements OnModuleInit {
     return memberMetadata;
   }
 
-  async getConversationHistory(chatId: string) {
+  async getChat(chatId: string) {
+    const chat = await this.prismaService.getChat(chatId);
+    return chat;
+  }
+
+  async getConversationHistory(chatId: string): Promise<Message[]> {
     const conversation = await this.prismaService.getChatHistory(chatId);
     return conversation;
   }

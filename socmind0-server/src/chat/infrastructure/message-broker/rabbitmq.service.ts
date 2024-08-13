@@ -1,6 +1,7 @@
 // src/infrastructure/message-broker/rabbitmq.service.ts
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Message } from '@prisma/client';
 import * as amqplib from 'amqplib';
 
 @Injectable()
@@ -67,7 +68,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   async consumeMessages(
     memberId: string,
     chatId: string,
-    callback: (message: any) => void,
+    callback: (message: Message) => void,
   ) {
     const exchange = `${chatId}_exchange`;
     const queueName = `${chatId}_${memberId}_queue`;
@@ -112,7 +113,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   }
 
   // Publishing
-  async sendMessage(message: any) {
+  async sendMessage(message: Message) {
     if (message?.chatId === undefined) {
       throw new Error('Missing message.chatId.');
     }

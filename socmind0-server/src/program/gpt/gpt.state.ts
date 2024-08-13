@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from 'src/chat/chat.service';
 import OpenAI from 'openai';
-import { AppGateway } from 'src/app.gateway';
+import { AppGateway } from 'src/gateway/app.gateway';
 
 @Injectable()
 export class GptState {

@@ -3,10 +3,12 @@ import { useState, useEffect } from "react";
 import { useSocket } from "./useSocket";
 
 interface Message {
-  content: string;
-  messageType: string;
+  id: string;
+  content: { text: string };
+  senderId: string | null;
   chatId: string;
-  senderId?: string;
+  createdAt: Date;
+  type: "MEMBER" | "SYSTEM";
 }
 
 export const useChatMessages = (chatId: string) => {

@@ -1,7 +1,8 @@
 // src/user/user.service.ts
 import { Injectable } from '@nestjs/common';
+import { Message } from '@prisma/client';
 import { ChatService } from 'src/chat/chat.service';
-import { AppGateway } from 'src/app.gateway';
+import { AppGateway } from 'src/gateway/app.gateway';
 
 @Injectable()
 export class UserService {
@@ -24,12 +25,7 @@ export class UserService {
     );
   }
 
-  async handleMessage(message: any) {
-    if (message.senderId === this.memberId) {
-      return;
-    }
-
-    // Emit the received message to the connected client
+  async handleMessage(message: Message) {
     this.appGateway.sendMessageToUser(message);
   }
 
@@ -41,7 +37,7 @@ export class UserService {
         this.handleMessage.bind(this),
       );
 
-      this.appGateway.notifyNewChat(message.chatId);
+      await this.appGateway.sendNewChatToUser(message.chatId);
 
       console.log(
         `Queue to chat ${message.chatId} initialized for member ${this.memberId}.`,
