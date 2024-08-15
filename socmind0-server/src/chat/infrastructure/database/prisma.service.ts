@@ -34,6 +34,13 @@ export class PrismaService
     });
   }
 
+  async getChatWithMembers(id: string) {
+    return await this.chat.findUnique({
+      where: { id },
+      include: { members: true },
+    });
+  }
+
   async getChatHistory(chatId: string): Promise<Message[]> {
     const messages = await this.message.findMany({
       where: {

@@ -288,6 +288,24 @@ export class ChatService implements OnModuleInit {
     return chats;
   }
 
+  async getAllChats() {
+    const chats = await this.prismaService.getAllChats();
+
+    const simplifiedChats = chats.map((chat) => ({
+      memberIds: chat.members.map((member) => member.memberId),
+      id: chat.id,
+      name: chat.name as string | null,
+      context: chat.context as string | null,
+      creator: chat.creator as string | null,
+      topic: chat.topic as string | null,
+      conclusion: chat.conclusion as string | null,
+      createdAt: chat.createdAt,
+      updatedAt: chat.updatedAt,
+    }));
+
+    return simplifiedChats;
+  }
+
   async getMemberMetadata(memberId: string) {
     const memberMetadata = await this.prismaService.getMember(memberId);
     return memberMetadata;
@@ -296,6 +314,24 @@ export class ChatService implements OnModuleInit {
   async getChat(chatId: string) {
     const chat = await this.prismaService.getChat(chatId);
     return chat;
+  }
+
+  async getChatWithMembers(chatId: string) {
+    const chat = await this.prismaService.getChatWithMembers(chatId);
+
+    const simplifiedChat = {
+      memberIds: chat.members.map((member) => member.memberId),
+      id: chat.id,
+      name: chat.name as string | null,
+      context: chat.context as string | null,
+      creator: chat.creator as string | null,
+      topic: chat.topic as string | null,
+      conclusion: chat.conclusion as string | null,
+      createdAt: chat.createdAt,
+      updatedAt: chat.updatedAt,
+    };
+
+    return simplifiedChat;
   }
 
   async getConversationHistory(chatId: string): Promise<Message[]> {

@@ -52,7 +52,7 @@ export class AppGateway
 
   @SubscribeMessage('chats')
   async handleChats() {
-    const chats = await this.chatService.getMemberChats(this.userId);
+    const chats = await this.chatService.getAllChats();
     return { event: 'chats', data: chats };
   }
 
@@ -75,11 +75,12 @@ export class AppGateway
   }
 
   async sendUserChats() {
-    const chats = await this.chatService.getMemberChats(this.userId);
+    const chats = await this.chatService.getAllChats();
     this.userSocket?.emit('chats', chats);
   }
   // Type of chats:
-  // chats: {
+  // chat: {
+  //   memberIds: string[];
   //   id: string;
   //   name: string | null;
   //   context: string | null;
@@ -88,10 +89,10 @@ export class AppGateway
   //   conclusion: string | null;
   //   createdAt: Date;
   //   updatedAt: Date;
-  // }[];
+  // };
 
   async sendNewChatToUser(chatId: string) {
-    const chat = await this.chatService.getChat(chatId);
+    const chat = await this.chatService.getChatWithMembers(chatId);
     this.userSocket?.emit('newChat', chat);
   }
 
