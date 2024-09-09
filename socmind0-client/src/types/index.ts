@@ -7,8 +7,8 @@ export interface Chat {
   creator: string | null;
   topic: string | null;
   conclusion: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Message {
@@ -18,6 +18,6 @@ export interface Message {
   };
   senderId: string | null;
   chatId: string;
-  createdAt: Date;
+  createdAt: string;
   type: "MEMBER" | "SYSTEM";
 }

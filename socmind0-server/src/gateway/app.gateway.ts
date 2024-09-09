@@ -58,8 +58,8 @@ export class AppGateway
 
   @SubscribeMessage('chatHistory')
   async handleChatHistory(@MessageBody() chatId: string) {
-    const chatHistory = await this.chatService.getConversationHistory(chatId);
-    return { event: 'chatHistory', data: chatHistory };
+    const messages = await this.chatService.getConversationHistory(chatId);
+    return { event: 'chatHistory', data: { chatId, messages } };
   }
 
   @SubscribeMessage('sendMessage')

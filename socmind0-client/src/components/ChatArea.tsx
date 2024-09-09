@@ -1,24 +1,60 @@
-import { useEffect, useRef } from "react";
+// src/components/ChatArea.tsx
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { Chat, Message } from "@/types";
 
 interface ChatAreaProps {
   selectedChat: Chat;
   messages: Message[];
+  onSendMessage: (chatId: string, message: Message) => void;
 }
 
 export function ChatArea({
   selectedChat,
   messages,
+  onSendMessage,
 }: ChatAreaProps): JSX.Element {
+  const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [inputMessage]);
+
   const getChatDisplayName = (chat: Chat): string => {
     return chat.name || `Chat with ${chat.memberIds.join(", ")}`;
+  };
+
+  const handleSendMessage = () => {
+    if (inputMessage.trim()) {
+      const newMessage: Message = {
+        id: `msg_${Date.now()}`,
+        type: "MEMBER",
+        senderId: "Me",
+        chatId: selectedChat.id,
+        content: { text: inputMessage.trim() },
+        createdAt: new Date().toISOString(),
+      };
+      onSendMessage(selectedChat.id, newMessage);
+      setInputMessage("");
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSendMessage();
+    }
   };
 
   return (
@@ -47,12 +83,20 @@ export function ChatArea({
       </div>
       <div className="bg-white p-4 border-t">
         <div className="flex items-center">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            className="flex-1 border rounded-full py-2 px-4 mr-2"
+          <textarea
+            ref={textareaRef}
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message... (Shift+Enter for new line)"
+            className="flex-1 border rounded-lg py-2 px-4 mr-2 max-h-32 min-h-[2.5rem] resize-none overflow-y-auto break-words"
+            rows={1}
+            style={{ width: "calc(100% - 3rem)" }} // Adjust based on your send button width
           />
-          <button className="bg-blue-500 text-white rounded-full p-2">
+          <button
+            onClick={handleSendMessage}
+            className="bg-blue-500 text-white rounded-full p-2 h-10 w-10 flex items-center justify-center flex-shrink-0"
+          >
             <Send size={20} />
           </button>
         </div>
