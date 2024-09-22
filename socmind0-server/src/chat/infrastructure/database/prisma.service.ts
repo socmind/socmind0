@@ -28,6 +28,37 @@ export class PrismaService
     });
   }
 
+  async getAllChatsWithLastMessage() {
+    const chats = await this.chat.findMany({
+      include: {
+        members: {
+          select: {
+            memberId: true,
+          },
+        },
+        messages: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
+      },
+    });
+
+    return chats.map((chat) => ({
+      id: chat.id,
+      name: chat.name as string | null,
+      context: chat.context as string | null,
+      creator: chat.creator as string | null,
+      topic: chat.topic as string | null,
+      conclusion: chat.conclusion as string | null,
+      createdAt: chat.createdAt,
+      updatedAt: chat.updatedAt,
+      memberIds: chat.members.map((member) => member.memberId),
+      latestMessage: (chat.messages[0] ?? null) as Message | null,
+    }));
+  }
+
   async getChat(id: string) {
     return await this.chat.findUnique({
       where: { id },

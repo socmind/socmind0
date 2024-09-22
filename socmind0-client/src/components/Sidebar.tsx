@@ -1,35 +1,36 @@
 // src/components/Sidebar.tsx
 "use client";
 
-import { mockMessages } from "@/data/mockData";
 import { Chat, Message } from "@/types";
 import { Plus, Search } from "lucide-react";
 
 interface SidebarProps {
   chats: Chat[];
-  messages: Record<string, Message[]>;
   selectedChat: Chat | null;
   onChatSelect: (chat: Chat) => void;
   onNewChat: (chat: Chat) => void;
 }
 
-function getRecentMessage(
-  chatId: string,
-  messages: Record<string, Message[]>
-): string {
-  const chatMessages = messages[chatId];
-  return chatMessages && chatMessages.length > 0
-    ? chatMessages[chatMessages.length - 1].content.text
-    : "";
+// function getRecentMessage(
+//   chatId: string,
+//   messages: Record<string, Message[]>
+// ): string {
+//   const chatMessages = messages[chatId];
+//   return chatMessages && chatMessages.length > 0
+//     ? chatMessages[chatMessages.length - 1].content.text
+//     : "";
+// }
+
+function getLastMessage(chat: Chat): string {
+  return chat.lastMessage?.content.text ?? "";
 }
 
 function getChatDisplayName(chat: Chat): string {
-  return chat.name || `Chat with ${chat.memberIds.join(", ")}`;
+  return chat.name ?? `Chat with ${chat.memberIds.join(", ")}`;
 }
 
 export function Sidebar({
   chats,
-  messages,
   selectedChat,
   onChatSelect,
   onNewChat,
@@ -38,7 +39,21 @@ export function Sidebar({
     const newChat: Chat = {
       id: `chat_${Date.now()}`,
       name: `Chat ${chats.length + 1}`,
-      memberIds: ["Me", "AI", "Another AI"],
+      memberIds: [
+        "Me",
+        "Alexander Graham Bell",
+        "Thomas J. Watson",
+        "Atanosoff",
+        "Konrad Zuse",
+        "Eckert and Mauchly",
+        "Bill Gates",
+        "Steve Jobs",
+        "Jeff Bezos",
+        "Sergey Brin",
+        "Larry Page",
+        "Mark Zuckerberg",
+        "Elon Musk",
+      ],
       context: null,
       creator: null,
       topic: null,
@@ -87,7 +102,7 @@ export function Sidebar({
                 {getChatDisplayName(chat)}
               </h3>
               <p className="text-sm text-gray-500 truncate">
-                {getRecentMessage(chat.id, messages)}
+                {getLastMessage(chat)}
               </p>
             </div>
           </div>

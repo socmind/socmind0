@@ -1,6 +1,5 @@
 // src/types/index.ts
 export interface Chat {
-  memberIds: string[];
   id: string;
   name: string | null;
   context: string | null;
@@ -9,6 +8,8 @@ export interface Chat {
   conclusion: string | null;
   createdAt: string;
   updatedAt: string;
+  memberIds: string[];
+  lastMessage?: Message;
 }
 
 export interface Message {

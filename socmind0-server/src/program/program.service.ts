@@ -11,7 +11,7 @@ import { LastInWinsMutex } from './program.mutex';
 
 @Injectable()
 export class ProgramService implements OnModuleInit {
-  private memberIds: string[] = [];
+  private programIds: string[] = [];
   private programStates: Map<string, any> = new Map();
   private currentDelay: number = 15000;
   private isPaused: boolean = false;
@@ -31,16 +31,17 @@ export class ProgramService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    this.memberIds = await this.getAllProgramIds();
+    this.programIds = await this.getAllProgramIds();
 
     await Promise.all(
-      this.memberIds.flatMap((memberId) => [
+      this.programIds.flatMap((programId) => [
         this.chatService.initAllQueuesConsumption(
-          memberId,
-          (message: Message) => this.handleMessage(memberId, message),
+          programId,
+          (message: Message) => this.handleMessage(programId, message),
         ),
-        this.chatService.initServiceQueueConsumption(memberId, (message: any) =>
-          this.handleServiceMessage(memberId, message),
+        this.chatService.initServiceQueueConsumption(
+          programId,
+          (message: any) => this.handleServiceMessage(programId, message),
         ),
       ]),
     );

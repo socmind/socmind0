@@ -42,7 +42,7 @@ export class AppGateway
   async handleConnection(client: Socket) {
     this.userSocket = client;
     this.logger.log(`Client connected: ${client.id}`);
-    await this.sendUserChats();
+    await this.sendInitialData();
   }
 
   handleDisconnect(client: Socket) {
@@ -55,6 +55,18 @@ export class AppGateway
     const chats = await this.chatService.getAllChats();
     return { event: 'chats', data: chats };
   }
+  // Type of chats:
+  // chat: {
+  //   memberIds: string[];
+  //   id: string;
+  //   name: string | null;
+  //   context: string | null;
+  //   creator: string | null;
+  //   topic: string | null;
+  //   conclusion: string | null;
+  //   createdAt: Date;
+  //   updatedAt: Date;
+  // };
 
   @SubscribeMessage('chatHistory')
   async handleChatHistory(@MessageBody() chatId: string) {
@@ -74,22 +86,10 @@ export class AppGateway
     );
   }
 
-  async sendUserChats() {
-    const chats = await this.chatService.getAllChats();
-    this.userSocket?.emit('chats', chats);
+  async sendInitialData() {
+    const data = await this.chatService.getInitialChatData();
+    this.userSocket?.emit('initialData', data);
   }
-  // Type of chats:
-  // chat: {
-  //   memberIds: string[];
-  //   id: string;
-  //   name: string | null;
-  //   context: string | null;
-  //   creator: string | null;
-  //   topic: string | null;
-  //   conclusion: string | null;
-  //   createdAt: Date;
-  //   updatedAt: Date;
-  // };
 
   async sendNewChatToUser(chatId: string) {
     const chat = await this.chatService.getChatWithMembers(chatId);

@@ -306,6 +306,11 @@ export class ChatService implements OnModuleInit {
     return simplifiedChats;
   }
 
+  async getInitialChatData() {
+    const chats = await this.prismaService.getAllChatsWithLastMessage();
+    return chats;
+  }
+
   async getMemberMetadata(memberId: string) {
     const memberMetadata = await this.prismaService.getMember(memberId);
     return memberMetadata;
@@ -320,7 +325,6 @@ export class ChatService implements OnModuleInit {
     const chat = await this.prismaService.getChatWithMembers(chatId);
 
     const simplifiedChat = {
-      memberIds: chat.members.map((member) => member.memberId),
       id: chat.id,
       name: chat.name as string | null,
       context: chat.context as string | null,
@@ -329,6 +333,7 @@ export class ChatService implements OnModuleInit {
       conclusion: chat.conclusion as string | null,
       createdAt: chat.createdAt,
       updatedAt: chat.updatedAt,
+      memberIds: chat.members.map((member) => member.memberId),
     };
 
     return simplifiedChat;
