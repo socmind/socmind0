@@ -94,6 +94,10 @@ export class ClaudeState {
 
       const response = await this.anthropic.messages.create(requestBody);
 
+      if (response.content.length === 0) {
+        return;
+      }
+
       let text = '';
       const contentBlock = response.content[0];
       if (contentBlock.type === 'text') {

@@ -26,6 +26,10 @@ export class UserService {
   }
 
   async handleMessage(message: Message) {
+    if (message.chatId === this.memberId) {
+      return;
+    }
+
     this.appGateway.sendMessageToUser(message);
   }
 

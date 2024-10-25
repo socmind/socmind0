@@ -19,6 +19,7 @@ export function ChatArea({
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const userId = "flynn";
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -40,7 +41,7 @@ export function ChatArea({
       const newMessage: Message = {
         id: `msg_${Date.now()}`,
         type: "MEMBER",
-        senderId: "Me",
+        senderId: userId,
         chatId: selectedChat.id,
         content: { text: inputMessage.trim() },
         createdAt: new Date().toISOString(),
@@ -75,7 +76,7 @@ export function ChatArea({
             <MessageBubble
               key={message.id}
               message={message}
-              isUser={message.senderId === "Me"}
+              isUser={message.senderId === userId}
             />
           )
         )}
