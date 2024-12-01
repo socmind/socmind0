@@ -43,16 +43,6 @@ export function Sidebar({
         "Me",
         "Alexander Graham Bell",
         "Thomas J. Watson",
-        "Atanosoff",
-        "Konrad Zuse",
-        "Eckert and Mauchly",
-        "Bill Gates",
-        "Steve Jobs",
-        "Jeff Bezos",
-        "Sergey Brin",
-        "Larry Page",
-        "Mark Zuckerberg",
-        "Elon Musk",
       ],
       context: null,
       creator: null,
@@ -87,9 +77,8 @@ export function Sidebar({
         {chats.map((chat) => (
           <div
             key={chat.id}
-            className={`flex items-center p-4 h-20 cursor-pointer ${
-              selectedChat && selectedChat.id === chat.id ? "bg-blue-100" : ""
-            }`}
+            className={`flex items-center p-4 h-20 cursor-pointer ${selectedChat && selectedChat.id === chat.id ? "bg-blue-100" : ""
+              }`}
             onClick={() => onChatSelect(chat)}
           >
             <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
