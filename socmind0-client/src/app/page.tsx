@@ -49,10 +49,6 @@ export default function Home() {
       socket.on(
         "chatHistory",
         (chatData: { chatId: string; messages: Message[] }) => {
-          // setAllMessages((prevMessages) => ({
-          //   ...prevMessages,
-          //   [chatData.chatId]: chatData.messages,
-          // }));
           setCurrentMessages(chatData.messages);
           setIsLoading(false);
         }
@@ -116,10 +112,6 @@ export default function Home() {
   };
 
   const addNewMessage = (chatId: string, newMessage: Message) => {
-    // setAllMessages((prevMessages) => ({
-    //   ...prevMessages,
-    //   [chatId]: [...(prevMessages[chatId] || []), newMessage],
-    // }));
     setCurrentMessages((prevMessages) => [...prevMessages, newMessage]);
     if (socket) {
       socket.emit("sendMessage", {

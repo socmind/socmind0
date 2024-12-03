@@ -1,7 +1,7 @@
 // src/components/Sidebar.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Chat, Member } from "@/types";
 import { Plus } from "lucide-react";
 import { chatApi } from "@/api/chat";
@@ -33,18 +33,20 @@ export function Sidebar({
   const [error, setError] = useState<string | null>(null);
   const userId = "flynn";
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        const membersList = await chatApi.getAllMembers();
-        setMembers(membersList);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch members');
-      }
-    };
-
-    fetchMembers();
+  const fetchMembers = useCallback(async () => {
+    try {
+      const membersList = await chatApi.getAllMembers();
+      setMembers(membersList);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch members');
+    }
   }, []);
+
+  useEffect(() => {
+    if (isDropdownOpen) {
+      fetchMembers();
+    }
+  }, [isDropdownOpen, fetchMembers]);
 
   const handleNewChatClick = () => {
     setIsDropdownOpen(true);
@@ -83,13 +85,13 @@ export function Sidebar({
 
   return (
     <div className="w-1/6 bg-white border-r flex flex-col">
-      <div className="p-4 border-b relative">
+      <div className="h-16 p-4 flex justify-end relative">
         <button
           onClick={handleNewChatClick}
-          className="w-full flex items-center justify-center bg-blue-500 text-white rounded-md py-2 hover:bg-blue-600 transition-colors"
+          className="p-2 flex items-center justify-center bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+          title="New Chat"
         >
-          <Plus size={20} className="mr-2" />
-          New Chat
+          <Plus size={16} />
         </button>
 
         {/* Member Selection Dropdown */}
