@@ -8,15 +8,20 @@ import { GptState } from './gpt/gpt.state';
 import { ClaudeState } from './claude/claude.state';
 import { GeminiState } from './gemini/gemini.state';
 import { LastInWinsMutex } from './program.mutex';
+import { ProgramEvents } from 'src/events/program.events';
 
 @Injectable()
 export class ProgramService implements OnModuleInit {
+  private userId = 'flynn';
   private programIds: string[] = [];
   private programStates: Map<string, any> = new Map();
-  private currentDelay: number = 15000;
+  private currentDelay: number = 10000;
   private isPaused: boolean = false;
   private pendingMessages: Map<string, Map<string, any>> = new Map();
   private memberChatLocks: Map<string, LastInWinsMutex> = new Map();
+  private messageCounter: number = 0;
+  private autoPauseThreshold: number = 12;
+  private isAutoPauseEnabled: boolean = false;
 
   constructor(
     private readonly chatService: ChatService,
@@ -24,6 +29,7 @@ export class ProgramService implements OnModuleInit {
     private readonly gptState: GptState,
     private readonly claudeState: ClaudeState,
     private readonly geminiState: GeminiState,
+    private readonly programEvents: ProgramEvents,
   ) {
     this.programStates.set('gpt-4o', this.gptState);
     this.programStates.set('claude-3.5', this.claudeState);
@@ -45,11 +51,20 @@ export class ProgramService implements OnModuleInit {
         ),
       ]),
     );
+
+    // Subscribe to resume events
+    this.programEvents.resumeProgram$.subscribe(() => {
+      this.resume();
+    });
   }
 
   async handleMessage(memberId: string, message: Message) {
     if (message.senderId === memberId) {
       return;
+    }
+
+    if (message.senderId === this.userId) {
+      this.messageCounter = 0;
     }
 
     const chatId = message.chatId;
@@ -69,6 +84,17 @@ export class ProgramService implements OnModuleInit {
         this.setPending(memberId, message);
         console.log('handleMessage paused');
         return;
+      }
+
+      if (this.isAutoPauseEnabled) {
+        this.messageCounter++;
+        if (this.messageCounter >= this.autoPauseThreshold) {
+          this.messageCounter = 0;
+          this.pause();
+          this.setPending(memberId, message);
+          console.log(`Auto-paused after ${this.autoPauseThreshold} messages`);
+          return;
+        }
       }
 
       await this.applyDelay();
@@ -141,11 +167,24 @@ export class ProgramService implements OnModuleInit {
 
   pause() {
     this.isPaused = true;
+    this.programEvents.emitPauseStatus({
+      paused: true,
+      messageCount: this.messageCounter,
+      threshold: this.autoPauseThreshold,
+      isAutoPause: this.isAutoPauseEnabled,
+    });
     console.log('Message handling paused.');
   }
 
   async resume() {
     this.isPaused = false;
+    this.messageCounter = 0;
+    this.programEvents.emitPauseStatus({
+      paused: false,
+      messageCount: 0,
+      threshold: this.autoPauseThreshold,
+      isAutoPause: this.isAutoPauseEnabled,
+    });
     console.log(
       `Message handling resumed with delay of ${this.currentDelay} milliseconds.`,
     );
@@ -160,5 +199,25 @@ export class ProgramService implements OnModuleInit {
 
     await Promise.all(processingPromises);
     this.pendingMessages.clear();
+  }
+
+  setAutoPause(enabled: boolean, threshold?: number) {
+    this.isAutoPauseEnabled = enabled;
+    if (threshold !== undefined) {
+      this.autoPauseThreshold = threshold;
+    }
+    this.messageCounter = 0;
+    console.log(
+      `Auto-pause ${enabled ? 'enabled' : 'disabled'}${enabled ? ` with threshold of ${this.autoPauseThreshold} messages` : ''
+      }`,
+    );
+  }
+
+  getAutoPauseStatus() {
+    return {
+      enabled: this.isAutoPauseEnabled,
+      threshold: this.autoPauseThreshold,
+      currentCount: this.messageCounter,
+    };
   }
 }

@@ -53,18 +53,15 @@ async function main() {
       id: 'gemini-1.5',
       name: 'George',
       username: 'gemini-1.5',
-      systemMessage: `Your name is George. Prepend "George: " to your messages.
-      In group conversations, you should only speak when you have something meaningful to contribute.
-      If you deem that nothing needs to be said, reply with just the empty string, without "George: " prepended.`,
       type: MemberType.PROGRAM,
     },
   });
 
   console.log('Seeded members:');
-  console.log('Flynn:', flynn);
-  console.log('Charles:', charles);
-  console.log('Claudia:', claudia);
-  console.log('George:', george);
+  console.log(flynn.id);
+  console.log(charles.id);
+  console.log(claudia.id);
+  console.log(george.id);
 
   // Seeding Chats
   const chat1 = await prisma.chat.create({
@@ -73,19 +70,7 @@ async function main() {
       members: {
         create: [
           { memberId: flynn.id },
-          { memberId: charles.id },
-          { memberId: claudia.id },
           { memberId: george.id },
-        ],
-      },
-      messages: {
-        create: [
-          {
-            content: {
-              text: `Welcome to the Society of Mind.`,
-            },
-            type: MessageType.SYSTEM,
-          },
         ],
       },
     },

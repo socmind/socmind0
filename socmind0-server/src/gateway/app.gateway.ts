@@ -13,6 +13,7 @@ import { Message } from '@prisma/client';
 import { Server, Socket } from 'socket.io';
 import { ChatAdmin } from 'src/chat/chat.admin';
 import { ChatService } from 'src/chat/chat.service';
+import { ProgramEvents } from 'src/events/program.events';
 
 @WebSocketGateway({
   cors: {
@@ -33,10 +34,18 @@ export class AppGateway
   constructor(
     private readonly chatService: ChatService,
     private readonly chatAdmin: ChatAdmin,
+    private readonly programEvents: ProgramEvents,
   ) {}
 
   afterInit() {
     this.logger.log('WebSocket Gateway initialized');
+    
+    // Subscribe to program events
+    this.programEvents.pauseStatus$.subscribe((status) => {
+      if (this.userSocket) {
+        this.userSocket.emit('program:pause-status', status);
+      }
+    });
   }
 
   async handleConnection(client: Socket) {
@@ -55,18 +64,6 @@ export class AppGateway
     const chats = await this.chatService.getAllChats();
     return { event: 'chats', data: chats };
   }
-  // Type of chats:
-  // chat: {
-  //   memberIds: string[];
-  //   id: string;
-  //   name: string | null;
-  //   context: string | null;
-  //   creator: string | null;
-  //   topic: string | null;
-  //   conclusion: string | null;
-  //   createdAt: Date;
-  //   updatedAt: Date;
-  // };
 
   @SubscribeMessage('chatHistory')
   async handleChatHistory(@MessageBody() chatId: string) {
@@ -99,17 +96,13 @@ export class AppGateway
   sendMessageToUser(message: Message) {
     this.userSocket?.emit('newMessage', message);
   }
-  // Type of message:
-  // message: {
-  //   id: string;
-  //   content: { text: string };
-  //   senderId: string | null;
-  //   chatId: string;
-  //   createdAt: Date;
-  //   type: "MEMBER" | "SYSTEM";
-  // };
 
   sendTypingIndicator(chatId: string, memberId: string, isTyping: boolean) {
     this.userSocket?.emit('typingIndicator', { chatId, memberId, isTyping });
+  }
+
+  @SubscribeMessage('resumeProgram')
+  handleResumeProgram() {
+    this.programEvents.emitResumeProgram();
   }
 }

@@ -92,7 +92,7 @@ export function ChatArea({
             placeholder="Type a message... (Shift+Enter for new line)"
             className="flex-1 border rounded-lg py-2 px-4 mr-2 max-h-32 min-h-[2.5rem] resize-none overflow-y-auto break-words"
             rows={1}
-            style={{ width: "calc(100% - 3rem)" }} // Adjust based on your send button width
+            style={{ width: "calc(100% - 3rem)" }}
           />
           <button
             onClick={handleSendMessage}

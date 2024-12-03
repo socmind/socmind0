@@ -1,7 +1,7 @@
 // src/app/page.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { ChatArea } from "../components/ChatArea";
 import { Chat, Message } from "@/types";
@@ -10,10 +10,21 @@ import { useSocket } from "@/hooks/useSocket";
 export default function Home() {
   const { socket } = useSocket();
   const [chats, setChats] = useState<Chat[]>([]);
-  // const [allMessages, setAllMessages] = useState<Record<string, Message[]>>({});
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [isLoading, setIsLoading] = useState<Boolean>(true);
+
+  // Centralized function to add chats
+  const addChatIfNotExists = (newChat: Chat) => {
+    setChats((prevChats) => {
+      const exists = prevChats.some((chat) => chat.id === newChat.id);
+      if (exists) {
+        return prevChats;
+      } else {
+        return [...prevChats, newChat];
+      }
+    });
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -31,7 +42,7 @@ export default function Home() {
 
       // Listen for new chats
       socket.on("newChat", (newChat: Chat) => {
-        setChats((prevChats) => [...prevChats, newChat]);
+        addChatIfNotExists(newChat);
       });
 
       // Listen for chat history
@@ -57,10 +68,17 @@ export default function Home() {
     };
   }, [socket]);
 
+  const selectedChatRef = useRef<Chat | null>(null);
+
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+    console.log('Selected chat updated:', selectedChat);
+  }, [selectedChat]);
+
   useEffect(() => {
     if (socket) {
-      // Listen for new messages
-      socket.on("newMessage", (newMessage: Message) => {
+      const handleNewMessage = (newMessage: Message) => {
+        console.log('Received new message:', newMessage);
         setChats((prevChats) =>
           prevChats.map((chat) =>
             chat.id === newMessage.chatId
@@ -68,25 +86,21 @@ export default function Home() {
               : chat
           )
         );
-        if (selectedChat && selectedChat.id === newMessage.chatId) {
+        if (selectedChatRef.current && selectedChatRef.current.id === newMessage.chatId) {
+          console.log('Updating current messages with:', newMessage);
           setCurrentMessages((prevMessages) => [...prevMessages, newMessage]);
+        } else {
+          console.log('Message not for current chat. Selected:', selectedChatRef.current?.id, 'Message chat:', newMessage.chatId);
         }
-        // setAllMessages((prevMessages) => ({
-        //   ...prevMessages,
-        //   [newMessage.chatId]: [
-        //     ...(prevMessages[newMessage.chatId] || []),
-        //     newMessage,
-        //   ],
-        // }));
-      });
-    }
+      };
 
-    return () => {
-      if (socket) {
-        socket.off("newMessage");
-      }
-    };
-  }, [socket, selectedChat]);
+      socket.on("newMessage", handleNewMessage);
+
+      return () => {
+        socket.off("newMessage", handleNewMessage);
+      };
+    }
+  }, [socket]);
 
   const handleChatSelect = (chat: Chat) => {
     setSelectedChat(chat);
@@ -97,8 +111,8 @@ export default function Home() {
   };
 
   const addNewChat = (newChat: Chat) => {
-    setChats((prevChats) => [...prevChats, newChat]);
-    // setAllMessages((prevMessages) => ({ ...prevMessages, [newChat.id]: [] }));
+    addChatIfNotExists(newChat);
+    handleChatSelect(newChat);
   };
 
   const addNewMessage = (chatId: string, newMessage: Message) => {
@@ -134,13 +148,13 @@ export default function Home() {
       {selectedChat ? (
         <ChatArea
           selectedChat={selectedChat}
-          // messages={allMessages[selectedChat.id] || []}
           messages={currentMessages}
           onSendMessage={addNewMessage}
         />
       ) : (
         <div className="flex-1 flex items-center justify-center text-gray-500">
-          Welcome to the Society of Mind. Are you a user or a program?
+          Welcome to the Society of Mind. Join a groupchat with ChatGPT, Claude, Gemini, Llama, and Grok.
+          Watch artificial intelligences converse with each other.
         </div>
       )}
     </main>

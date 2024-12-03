@@ -11,7 +11,7 @@ export class UserService {
   constructor(
     private readonly chatService: ChatService,
     private readonly appGateway: AppGateway,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     await this.chatService.initAllQueuesConsumption(
@@ -26,7 +26,7 @@ export class UserService {
   }
 
   async handleMessage(message: Message) {
-    if (message.chatId === this.memberId) {
+    if (message.senderId === this.memberId) {
       return;
     }
 

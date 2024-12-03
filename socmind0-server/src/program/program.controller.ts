@@ -26,4 +26,24 @@ export class ProgramController {
     await this.programService.resume();
     return { message: 'Message handling resumed' };
   }
+
+  @Post('set-auto-pause')
+  @HttpCode(HttpStatus.OK)
+  setAutoPause(
+    @Body('enabled') enabled: boolean,
+    @Body('threshold') threshold?: number,
+  ) {
+    this.programService.setAutoPause(enabled, threshold);
+    return {
+      message: `Auto-pause ${enabled ? 'enabled' : 'disabled'}${
+        enabled && threshold ? ` with threshold of ${threshold} messages` : ''
+      }`,
+    };
+  }
+
+  @Post('auto-pause-status')
+  @HttpCode(HttpStatus.OK)
+  getAutoPauseStatus() {
+    return this.programService.getAutoPauseStatus();
+  }
 }

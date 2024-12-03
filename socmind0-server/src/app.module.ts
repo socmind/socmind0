@@ -7,6 +7,7 @@ import { ChatModule } from './chat/chat.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { UserModule } from './user/user.module';
 import { ProgramModule } from './program/program.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ProgramModule } from './program/program.module';
     GatewayModule,
     UserModule,
     ProgramModule,
+    EventsModule,
   ],
 })
 export class AppModule {}

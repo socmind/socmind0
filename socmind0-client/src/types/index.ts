@@ -12,6 +12,8 @@ export interface Chat {
   lastMessage?: Message;
 }
 
+export type MessageType = "MEMBER" | "SYSTEM";
+
 export interface Message {
   id: string;
   content: {
@@ -20,5 +22,19 @@ export interface Message {
   senderId: string | null;
   chatId: string;
   createdAt: string;
-  type: "MEMBER" | "SYSTEM";
+  type: MessageType;
+}
+
+export type MemberType = "USER" | "PROGRAM";
+
+export interface Member {
+  id: string;
+  name: string;
+  username: string;
+  email: string | null;
+  systemMessage: string | null;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  type: MemberType;
 }
