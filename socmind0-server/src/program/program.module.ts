@@ -9,6 +9,8 @@ import { LastInWinsMutex } from './program.mutex';
 import { GptState } from './gpt/gpt.state';
 import { ClaudeState } from './claude/claude.state';
 import { GeminiState } from './gemini/gemini.state';
+import { GrokState } from './grok/grok.state';
+import { LlamaState } from './llama/llama.state';
 
 @Module({
   imports: [
@@ -24,7 +26,9 @@ import { GeminiState } from './gemini/gemini.state';
     GptState,
     ClaudeState,
     GeminiState,
+    GrokState,
+    LlamaState
   ],
   controllers: [ProgramController],
 })
-export class ProgramModule {}
+export class ProgramModule { }

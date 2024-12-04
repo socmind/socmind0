@@ -7,6 +7,8 @@ import { ChatAdmin } from 'src/chat/chat.admin';
 import { GptState } from './gpt/gpt.state';
 import { ClaudeState } from './claude/claude.state';
 import { GeminiState } from './gemini/gemini.state';
+import { GrokState } from './grok/grok.state';
+import { LlamaState } from './llama/llama.state';
 import { LastInWinsMutex } from './program.mutex';
 import { ProgramEvents } from 'src/events/program.events';
 
@@ -29,11 +31,15 @@ export class ProgramService implements OnModuleInit {
     private readonly gptState: GptState,
     private readonly claudeState: ClaudeState,
     private readonly geminiState: GeminiState,
+    private readonly grokState: GrokState,
+    private readonly llamaState: LlamaState,
     private readonly programEvents: ProgramEvents,
   ) {
     this.programStates.set('gpt-4o', this.gptState);
     this.programStates.set('claude-3.5', this.claudeState);
     this.programStates.set('gemini-1.5', this.geminiState);
+    this.programStates.set('grok-beta', this.grokState);
+    this.programStates.set('llama-3.1', this.llamaState);
   }
 
   async onModuleInit() {

@@ -57,11 +57,35 @@ async function main() {
     },
   });
 
+  const grok = await prisma.member.upsert({
+    where: { id: 'grok-beta' },
+    update: {},
+    create: {
+      id: 'grok-beta',
+      name: 'Grok',
+      username: 'grok-beta',
+      type: MemberType.PROGRAM,
+    },
+  });
+
+  const llama = await prisma.member.upsert({
+    where: { id: 'llama-3.1' },
+    update: {},
+    create: {
+      id: 'llama-3.1',
+      name: 'Llama',
+      username: 'llama-3.1',
+      type: MemberType.PROGRAM,
+    },
+  });
+
   console.log('Seeded members:');
   console.log(flynn.id);
   console.log(charles.id);
   console.log(claudia.id);
   console.log(george.id);
+  console.log(grok.id);
+  console.log(llama.id);
 
   // Seeding Chats
   const chat1 = await prisma.chat.create({
