@@ -8,6 +8,7 @@ import { ChatPrompts } from './chat.prompts';
 @Injectable()
 export class ChatService implements OnModuleInit {
   private chatDirectory: Map<string, string[]> = new Map();
+  private readonly userId = 'flynn';
 
   constructor(
     private prismaService: PrismaService,
@@ -69,9 +70,12 @@ export class ChatService implements OnModuleInit {
     creator?: string,
     context?: string,
   ) {
+    // Ensure this.userId is included in the members list if not already present
+    const allMemberIds = [...new Set([...memberIds, this.userId])];
+
     const chatData: Prisma.ChatCreateInput = {
       members: {
-        create: memberIds.map((memberId) => ({
+        create: allMemberIds.map((memberId) => ({
           member: { connect: { id: memberId } },
         })),
       },
@@ -89,12 +93,12 @@ export class ChatService implements OnModuleInit {
 
     await this.rabbitMQService.createOrAddMembersToGroupChat(
       chat.id,
-      memberIds,
+      allMemberIds,
     );
 
-    await this.setFirstMessage(memberIds, chat.id, topic);
+    await this.setFirstMessage(allMemberIds, chat.id, topic);
 
-    for (const memberId of memberIds) {
+    for (const memberId of allMemberIds) {
       await this.rabbitMQService.sendServiceMessage(memberId, {
         notification: 'NEW_CHAT',
         chatId: chat.id,
@@ -105,9 +109,9 @@ export class ChatService implements OnModuleInit {
       await this.setChatContext(chat.id, context);
     }
 
-    this.updateDirectory(chat.id, memberIds);
+    this.updateDirectory(chat.id, allMemberIds);
 
-    console.log(`Chat ${chat.id} created with members: ${memberIds}.`);
+    console.log(`Chat ${chat.id} created with members: ${allMemberIds}.`);
 
     return chat;
   }
