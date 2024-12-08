@@ -83,7 +83,14 @@ export class ProgramService implements OnModuleInit {
       this.memberChatLocks.set(memberChatKey, memberChatLock);
     }
 
-    const release = await memberChatLock.acquire();
+    let release: () => void;
+    try {
+      release = await memberChatLock.acquire();
+    } catch (error) {
+      // If we get here, it means this handleMessage call was discarded in favor of a newer one.
+      console.warn('Lock acquisition canceled:', error.message);
+      return;
+    }
 
     try {
       if (this.isPaused) {

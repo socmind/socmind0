@@ -5,6 +5,7 @@ export class LastInWinsMutex {
   private locked: boolean = false;
   private waitingPromise: Promise<void> | null = null;
   private waitingResolve: (() => void) | null = null;
+  private waitingReject: ((reason?: any) => void) | null = null;
 
   async acquire(): Promise<() => void> {
     if (!this.locked) {
@@ -12,15 +13,20 @@ export class LastInWinsMutex {
       return () => this.release();
     }
 
-    // If there's already a waiting promise, replace it
+    // If there's already a waiting promise, reject it
     if (this.waitingPromise) {
-      // Resolve the old promise to prevent memory leaks
-      if (this.waitingResolve) this.waitingResolve();
+      if (this.waitingReject) {
+        this.waitingReject(new Error('Lock acquisition canceled by a newer call.'));
+      }
+      this.waitingPromise = null;
+      this.waitingResolve = null;
+      this.waitingReject = null;
     }
 
-    // Create a new promise
-    this.waitingPromise = new Promise<void>((resolve) => {
+    // Create a new waiting promise for the latest caller
+    this.waitingPromise = new Promise<void>((resolve, reject) => {
       this.waitingResolve = resolve;
+      this.waitingReject = reject;
     });
 
     // Wait for the lock to be released
