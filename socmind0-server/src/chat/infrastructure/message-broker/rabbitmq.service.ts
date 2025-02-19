@@ -12,12 +12,42 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private configService: ConfigService) {}
 
+  private setupErrorHandlers() {
+    this.connection.on('error', (err) => {
+      console.error('RabbitMQ connection error:', err);
+    });
+
+    this.connection.on('close', () => {
+      console.error('RabbitMQ connection closed unexpectedly');
+    });
+
+    this.channel.on('error', (err) => {
+      console.error('RabbitMQ channel error:', err);
+    });
+
+    this.channel.on('close', () => {
+      console.error('RabbitMQ channel closed unexpectedly');
+    });
+  }
+
   async onModuleInit() {
-    const rabbitmqUrl = this.configService.get<string>('RABBITMQ_URL');
-    this.connection = await amqplib.connect(rabbitmqUrl);
-    this.channel = await this.connection.createChannel();
-    await this.createServiceExchange();
-    console.log('RabbitMQ initialized.');
+    try {
+      const rabbitmqUrl = this.configService.get<string>('RABBITMQ_URL');
+      console.log('Connecting to RabbitMQ...');
+      
+      this.connection = await amqplib.connect(rabbitmqUrl, {heartbeat: 60});
+      console.log('RabbitMQ connection established');
+      
+      this.channel = await this.connection.createChannel();
+      console.log('RabbitMQ channel created');
+      
+      await this.createServiceExchange();
+      this.setupErrorHandlers();
+      console.log('RabbitMQ initialization completed');
+    } catch (error) {
+      console.error('Failed to initialize RabbitMQ:', error);
+      throw error; // Re-throw to let NestJS handle the initialization failure
+    }
   }
 
   async onModuleDestroy() {
@@ -34,6 +64,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     await this.channel.assertExchange(this.serviceExchange, 'direct', {
       durable: true,
     });
+    console.log('Service exchange created');
   }
 
   async createMemberServiceQueue(memberId: string) {

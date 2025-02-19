@@ -36,31 +36,23 @@ export class ChatService implements OnModuleInit {
     };
 
     if (senderId) {
-      const memberExists = await this.prismaService.member.findUnique({
-        where: { id: senderId },
-      });
+      const memberExists = await this.prismaService.findMemberById(senderId);
       if (!memberExists) {
         throw new Error(`Member with id ${senderId} not found.`);
       }
       messageData.sender = { connect: { id: senderId } };
     }
 
-    const execute = async (prisma: Prisma.TransactionClient) => {
-      const message = await prisma.message.create({
-        data: messageData,
-      });
+    const message = await this.prismaService.createMessage(messageData);
 
-      try {
-        await this.rabbitMQService.sendMessage(message);
-      } catch (error) {
-        console.error('Failed to send message to RabbitMQ:', error);
-        throw error;
-      }
+    try {
+      await this.rabbitMQService.sendMessage(message);
+    } catch (error) {
+      console.error('Failed to send message to RabbitMQ:', error);
+      throw error;
+    }
 
-      return message;
-    };
-
-    return this.prismaService.$transaction(execute);
+    return message;
   }
 
   async createChat(
@@ -121,19 +113,13 @@ export class ChatService implements OnModuleInit {
     chatId: string,
     topic?: string,
   ): Promise<Message> {
-    const members = await this.prismaService.member.findMany({
-      where: {
-        id: {
-          in: memberIds,
-        },
-      },
-    });
+    const members = await this.prismaService.getMembersByIds(memberIds);
 
     const memberInfo = members
       .map((member) => `${member.name}: ${member.description}`)
       .join('\n');
 
-    const directory = `Committee created with the following members:\n${memberInfo}\n`;
+    const directory = `Conversation created with the following members:\n${memberInfo}\n`;
 
     const guidelines = this.chatPrompts.getTaskDelegationPrompt();
 
@@ -148,7 +134,9 @@ export class ChatService implements OnModuleInit {
       console.log(`First message sent for chat ${chatId}: ${firstMessage}.`);
       return msg;
     } else {
-      const firstMessage = directory + guidelines;
+      // const firstMessage = directory + guidelines;
+      const firstMessage = directory;
+
       const messageData: Prisma.MessageCreateInput = {
         chat: { connect: { id: chatId } },
         content: { text: firstMessage },
@@ -187,7 +175,7 @@ export class ChatService implements OnModuleInit {
     });
 
     await this.publishMessage(chatId, {
-      text: `${memberId} has joined the chat.`,
+      text: `${memberId} has joined the conversation.`,
     });
 
     this.updateDirectory(chatId, [memberId]);

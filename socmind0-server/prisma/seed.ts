@@ -18,41 +18,44 @@ async function main() {
     },
   });
 
-  const charles = await prisma.member.upsert({
+  const gpt4o = await prisma.member.upsert({
     where: { id: 'gpt-4o' },
     update: {},
     create: {
       id: 'gpt-4o',
-      name: 'Charles',
+      name: 'GPT-4o',
       username: 'gpt-4o',
-      systemMessage: `Your name is Charles. Prepend "Charles: " to your messages.
+      systemMessage: `Your name is GPT-4o. Prepend "GPT-4o: " to your messages.
       In group conversations, you should only speak when you have something meaningful to contribute.
-      If you deem that nothing needs to be said, reply with just the empty string, without "Charles: " prepended.`,
+      If you deem that nothing needs to be said, reply with just the empty string, without "GPT-4o: " prepended.`,
       type: MemberType.PROGRAM,
     },
   });
 
-  const claudia = await prisma.member.upsert({
+  const claude = await prisma.member.upsert({
     where: { id: 'claude-3.5' },
     update: {},
     create: {
       id: 'claude-3.5',
-      name: 'Claudia',
+      name: 'Claude',
       username: 'claude-3.5',
-      systemMessage: `Your name is Claudia. Prepend "Claudia: " to your messages.
+      systemMessage: `Your name is Claude. Prepend "Claude: " to your messages.
       In group conversations, you should only speak when you have something meaningful to contribute.
-      If you deem that nothing needs to be said, reply with just the empty string, without "Claudia: " prepended.`,
+      If you deem that nothing needs to be said, reply with just the empty string, without "Claude: " prepended.`,
       type: MemberType.PROGRAM,
     },
   });
 
-  const george = await prisma.member.upsert({
+  const gemini = await prisma.member.upsert({
     where: { id: 'gemini-1.5' },
     update: {},
     create: {
       id: 'gemini-1.5',
-      name: 'George',
+      name: 'Gemini',
       username: 'gemini-1.5',
+      systemMessage: `Your name is Gemini. Prepend "Gemini: " to your messages.
+      In group conversations, you should only speak when you have something meaningful to contribute.
+      If you deem that nothing needs to be said, reply with just the empty string, without "Gemini: " prepended.`,
       type: MemberType.PROGRAM,
     },
   });
@@ -64,6 +67,9 @@ async function main() {
       id: 'grok-beta',
       name: 'Grok',
       username: 'grok-beta',
+      systemMessage: `Your name is Grok. Prepend "Grok: " to your messages.
+      In group conversations, you should only speak when you have something meaningful to contribute.
+      If you deem that nothing needs to be said, reply with just the empty string, without "Grok: " prepended.`,
       type: MemberType.PROGRAM,
     },
   });
@@ -75,26 +81,29 @@ async function main() {
       id: 'llama-3.1',
       name: 'Llama',
       username: 'llama-3.1',
+      systemMessage: `Your name is Llama. Prepend "Llama: " to your messages.
+      In group conversations, you should only speak when you have something meaningful to contribute.
+      If you deem that nothing needs to be said, reply with just the empty string, without "Llama: " prepended.`,
       type: MemberType.PROGRAM,
     },
   });
 
   console.log('Seeded members:');
   console.log(flynn.id);
-  console.log(charles.id);
-  console.log(claudia.id);
-  console.log(george.id);
+  console.log(gpt4o.id);
+  console.log(claude.id);
+  console.log(gemini.id);
   console.log(grok.id);
   console.log(llama.id);
 
   // Seeding Chats
   const chat1 = await prisma.chat.create({
     data: {
-      name: 'First Chat',
+      name: 'New Chat',
       members: {
         create: [
           { memberId: flynn.id },
-          { memberId: george.id },
+          { memberId: gemini.id },
         ],
       },
     },
