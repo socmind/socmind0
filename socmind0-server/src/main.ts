@@ -11,12 +11,8 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
     const configService = app.get(ConfigService);
-    const host = configService.get<string>('HOST', 'localhost');
+    const host = configService.get<string>('HOST', '0.0.0.0');
     const port = configService.get<number>('PORT', 3001);
-    const appUrl = configService.get<string>(
-      'APP_URL',
-      `http://${host}:${port}`,
-    );
     const corsOrigin = configService.get<string>(
       'CORS_ORIGIN',
       'http://localhost:3000',
@@ -32,7 +28,7 @@ async function bootstrap() {
     await app.init();
     const server = await app.listen(port);
 
-    logger.log(`Application is running on: ${appUrl}`);
+    logger.log(`Application is running on: http://${host}:${port}`);
   } catch (error) {
     logger.error('Failed to start the application', error.stack);
     process.exit(1);
