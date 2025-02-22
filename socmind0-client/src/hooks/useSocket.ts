@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 
+const api_url = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
+
 let socket: Socket | null = null;
 
 export const useSocket = () => {
@@ -9,7 +11,7 @@ export const useSocket = () => {
 
   useEffect(() => {
     if (!socket) {
-      socket = io("http://localhost:3001", { withCredentials: true });
+      socket = io(api_url, { withCredentials: true });
     }
 
     socket.on("connect", () => {

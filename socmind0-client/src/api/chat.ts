@@ -1,7 +1,7 @@
 // API client for chat endpoints
 import { Member, Chat } from '../types';
 
-const API_BASE_URL = 'http://localhost:3001';
+const api_url = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';;
 
 interface CreateChatData {
   memberIds: string[];
@@ -16,7 +16,7 @@ export const chatApi = {
    * Get all chat members
    */
   getAllMembers: async (): Promise<Member[]> => {
-    const response = await fetch(`${API_BASE_URL}/chat/members`, {
+    const response = await fetch(`${api_url}/chat/members`, {
       method: 'GET',
       credentials: 'include',
       headers: {
@@ -35,7 +35,7 @@ export const chatApi = {
    * Create a new chat
    */
   createChat: async (chatData: CreateChatData): Promise<Chat> => {
-    const response = await fetch(`${API_BASE_URL}/chat/create`, {
+    const response = await fetch(`${api_url}/chat/create`, {
       method: 'POST',
       credentials: 'include',
       headers: {
